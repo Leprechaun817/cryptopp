@@ -5,8 +5,9 @@
 /// \details Simon is a block cipher designed by Ray Beaulieu, Douglas Shors, Jason Smith,
 ///   Stefan Treatman-Clark, Bryan Weeks and Louis Wingers.
 /// \sa <A HREF="http://eprint.iacr.org/2013/404">The SIMON and SPECK Families of
-///   Lightweight Block Ciphers</A> and <A HREF="http://iadgov.github.io/simon-speck/">
-///   The Simon and Speck GitHub</A>
+///   Lightweight Block Ciphers</A>, <A HREF="http://iadgov.github.io/simon-speck/">
+///   The Simon and Speck GitHub</A> and <A HREF="https://www.cryptopp.com/wiki/SIMON">
+///   SIMON</A> on the Crypto++ wiki.
 /// \since Crypto++ 6.0
 
 #ifndef CRYPTOPP_SIMON_H
@@ -16,17 +17,31 @@
 #include "seckey.h"
 #include "secblock.h"
 
-#if CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_ARM32 || CRYPTOPP_BOOL_ARM64
-# define CRYPTOPP_SIMON64_ADVANCED_PROCESS_BLOCKS 1
+#if CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X86 || \
+    CRYPTOPP_BOOL_ARM32 || CRYPTOPP_BOOL_ARMV8 || \
+    CRYPTOPP_BOOL_PPC32 || CRYPTOPP_BOOL_PPC64
+# ifndef CRYPTOPP_DISABLE_SIMON_SIMD
+#  define CRYPTOPP_SIMON64_ADVANCED_PROCESS_BLOCKS 1
+# endif
 #endif
 
-#if CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_ARM32 || CRYPTOPP_BOOL_ARM64
-# define CRYPTOPP_SIMON128_ADVANCED_PROCESS_BLOCKS 1
+#if CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X86 || \
+    CRYPTOPP_BOOL_ARM32 || CRYPTOPP_BOOL_ARMV8 || \
+    CRYPTOPP_BOOL_PPC32 || CRYPTOPP_BOOL_PPC64
+# ifndef CRYPTOPP_DISABLE_SIMON_SIMD
+#  define CRYPTOPP_SIMON128_ADVANCED_PROCESS_BLOCKS 1
+# endif
+#endif
+
+// Yet another SunStudio/SunCC workaround. Failed self tests
+// in SSE code paths on i386 for SunStudio 12.3 and below.
+#if defined(__SUNPRO_CC) && (__SUNPRO_CC <= 0x5120)
+# undef CRYPTOPP_SIMON64_ADVANCED_PROCESS_BLOCKS
+# undef CRYPTOPP_SIMON128_ADVANCED_PROCESS_BLOCKS
 #endif
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class SIMON_Info
 /// \brief SIMON block cipher information
 /// \tparam L block size of the cipher, in bytes
 /// \tparam D default key length, in bytes
@@ -36,6 +51,10 @@ NAMESPACE_BEGIN(CryptoPP)
 template <unsigned int L, unsigned int D, unsigned int N, unsigned int M>
 struct SIMON_Info : public FixedBlockSize<L>, VariableKeyLength<D, N, M>
 {
+	/// \brief The algorithm name
+	/// \returns the algorithm name
+	/// \details StaticAlgorithmName returns the algorithm's name as a static
+	///   member function.
     static const std::string StaticAlgorithmName()
     {
         // Format is Cipher-Blocksize(Keylength)
@@ -43,7 +62,6 @@ struct SIMON_Info : public FixedBlockSize<L>, VariableKeyLength<D, N, M>
     }
 };
 
-/// \class SIMON_Base
 /// \brief SIMON block cipher base class
 /// \tparam W the word type
 /// \details User code should use SIMON64 or SIMON128
@@ -53,7 +71,7 @@ template <class W>
 struct SIMON_Base
 {
     virtual ~SIMON_Base() {}
-SIMON_Base() : m_kwords(0), m_rounds(0) {}
+    SIMON_Base() : m_kwords(0), m_rounds(0) {}
 
     typedef SecBlock<W, AllocatorWithCleanup<W, true> > AlignedSecBlock;
     mutable AlignedSecBlock m_wspace;  // workspace
@@ -62,7 +80,6 @@ SIMON_Base() : m_kwords(0), m_rounds(0) {}
     unsigned int            m_rounds;  // number of rounds
 };
 
-/// \class SIMON64
 /// \brief SIMON 64-bit block cipher
 /// \details Simon is a block cipher designed by Ray Beaulieu, Douglas Shors, Jason Smith,
 ///   Stefan Treatman-Clark, Bryan Weeks and Louis Wingers.
@@ -81,35 +98,41 @@ public:
     class CRYPTOPP_NO_VTABLE Base : protected SIMON_Base<word32>, public BlockCipherImpl<SIMON_Info<8, 12, 12, 16> >
     {
     public:
+        /// \brief The algorithm name
+        /// \returns the algorithm name
+        /// \details AlgorithmName returns the algorithm's name as a
+        ///   member function.
         std::string AlgorithmName() const {
             return StaticAlgorithmName() + (m_kwords == 0 ? "" :
                 "(" + IntToString(m_kwords*sizeof(word32)*8) + ")");
         }
 
+        std::string AlgorithmProvider() const;
+
     protected:
         void UncheckedSetKey(const byte *userKey, unsigned int keyLength, const NameValuePairs &params);
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Encryption transformation
     /// \details Enc provides implementation for encryption transformation. All key
     ///   sizes are supported.
     /// \since Crypto++ 6.0
     class CRYPTOPP_NO_VTABLE Enc : public Base
     {
-    protected:
+    public:
         void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
 #if CRYPTOPP_SIMON64_ADVANCED_PROCESS_BLOCKS
         size_t AdvancedProcessBlocks(const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags) const;
 #endif
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Decryption transformation
     /// \details Dec provides implementation for decryption transformation. All key
     ///   sizes are supported.
     /// \since Crypto++ 6.0
     class CRYPTOPP_NO_VTABLE Dec : public Base
     {
-    protected:
+    public:
         void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
 #if CRYPTOPP_SIMON64_ADVANCED_PROCESS_BLOCKS
         size_t AdvancedProcessBlocks(const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags) const;
@@ -120,7 +143,6 @@ public:
     typedef BlockCipherFinal<DECRYPTION, Dec> Decryption;
 };
 
-/// \class SIMON128
 /// \brief SIMON 128-bit block cipher
 /// \details Simon is a block cipher designed by Ray Beaulieu, Douglas Shors, Jason Smith,
 ///   Stefan Treatman-Clark, Bryan Weeks and Louis Wingers.
@@ -139,35 +161,41 @@ public:
     class CRYPTOPP_NO_VTABLE Base : protected SIMON_Base<word64>, public BlockCipherImpl<SIMON_Info<16, 16, 16, 32> >
     {
     public:
+        /// \brief The algorithm name
+        /// \returns the algorithm name
+        /// \details AlgorithmName returns the algorithm's name as a
+        ///   member function.
         std::string AlgorithmName() const {
             return StaticAlgorithmName() + (m_kwords == 0 ? "" :
                 "(" + IntToString(m_kwords*sizeof(word64)*8) + ")");
         }
 
+        std::string AlgorithmProvider() const;
+
     protected:
         void UncheckedSetKey(const byte *userKey, unsigned int keyLength, const NameValuePairs &params);
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Encryption transformation
     /// \details Enc provides implementation for encryption transformation. All key
     ///   sizes are supported.
     /// \since Crypto++ 6.0
     class CRYPTOPP_NO_VTABLE Enc : public Base
     {
-    protected:
+    public:
         void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
 #if CRYPTOPP_SIMON128_ADVANCED_PROCESS_BLOCKS
         size_t AdvancedProcessBlocks(const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags) const;
 #endif
     };
 
-    /// \brief Provides implementation for encryption transformation
+    /// \brief Decryption transformation
     /// \details Dec provides implementation for decryption transformation. All key
     ///   sizes are supported.
     /// \since Crypto++ 6.0
     class CRYPTOPP_NO_VTABLE Dec : public Base
     {
-    protected:
+    public:
         void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
 #if CRYPTOPP_SIMON128_ADVANCED_PROCESS_BLOCKS
         size_t AdvancedProcessBlocks(const byte *inBlocks, const byte *xorBlocks, byte *outBlocks, size_t length, word32 flags) const;

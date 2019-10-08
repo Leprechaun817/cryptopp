@@ -30,7 +30,6 @@ typedef SHA256 DefaultHashModule;
 /// \brief Default HMAC for use withDefaultEncryptorWithMAC and DefaultDecryptorWithMAC
 typedef HMAC<DefaultHashModule> DefaultMAC;
 
-/// \class DataDecryptorErr
 /// \brief Exception thrown when LegacyDecryptorWithMAC or DefaultDecryptorWithMAC decryption error is encountered
 class DataDecryptorErr : public Exception
 {
@@ -39,7 +38,6 @@ public:
 		: Exception(DATA_INTEGRITY_CHECK_FAILED, s) {}
 };
 
-/// \class KeyBadErr
 /// \brief Exception thrown when a bad key is encountered in DefaultDecryptorWithMAC and LegacyDecryptorWithMAC
 class KeyBadErr : public DataDecryptorErr
 {
@@ -47,7 +45,6 @@ class KeyBadErr : public DataDecryptorErr
 		: DataDecryptorErr("DataDecryptor: cannot decrypt message with this passphrase") {}
 };
 
-/// \class MACBadErr
 /// \brief Exception thrown when an incorrect MAC is encountered in DefaultDecryptorWithMAC and LegacyDecryptorWithMAC
 class MACBadErr : public DataDecryptorErr
 {
@@ -55,22 +52,20 @@ class MACBadErr : public DataDecryptorErr
 		: DataDecryptorErr("DataDecryptorWithMAC: MAC check failed") {}
 };
 
-/// \class DataParametersInfo
 /// \brief Algorithm information for password-based encryptors and decryptors
 template <unsigned int BlockSize, unsigned int KeyLength, unsigned int DigestSize, unsigned int SaltSize, unsigned int Iterations>
 struct DataParametersInfo
 {
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = BlockSize)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = KeyLength)
-	CRYPTOPP_CONSTANT(SALTLENGTH = SaltSize)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = DigestSize)
-	CRYPTOPP_CONSTANT(ITERATIONS = Iterations)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = BlockSize);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = KeyLength);
+	CRYPTOPP_CONSTANT(SALTLENGTH = SaltSize);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = DigestSize);
+	CRYPTOPP_CONSTANT(ITERATIONS = Iterations);
 };
 
 typedef DataParametersInfo<LegacyBlockCipher::BLOCKSIZE, LegacyBlockCipher::DEFAULT_KEYLENGTH, LegacyHashModule::DIGESTSIZE, 8, 200> LegacyParametersInfo;
 typedef DataParametersInfo<DefaultBlockCipher::BLOCKSIZE, DefaultBlockCipher::DEFAULT_KEYLENGTH, DefaultHashModule::DIGESTSIZE, 8, 2500> DefaultParametersInfo;
 
-/// \class DataEncryptor
 /// \brief Password-based Encryptor
 /// \tparam BC BlockCipher based class used for encryption
 /// \tparam H HashTransformation based class used for mashing
@@ -83,11 +78,11 @@ template <class BC, class H, class Info>
 class DataEncryptor : public ProxyFilter, public Info
 {
 public:
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
-	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
-	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH);
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE);
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS);
 
 	/// \brief Construct a DataEncryptor
 	/// \param passphrase a C-String password
@@ -109,7 +104,6 @@ private:
 	typename CBC_Mode<BC>::Encryption m_cipher;
 };
 
-/// \class DataDecryptor
 /// \brief Password-based Decryptor
 /// \tparam BC BlockCipher based class used for encryption
 /// \tparam H HashTransformation based class used for mashing
@@ -122,11 +116,11 @@ template <class BC, class H, class Info>
 class DataDecryptor : public ProxyFilter, public Info
 {
 public:
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
-	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
-	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH);
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE);
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS);
 
 	/// \brief Constructs a DataDecryptor
 	/// \param passphrase a C-String password
@@ -160,7 +154,6 @@ private:
 
 };
 
-/// \class DataEncryptorWithMAC
 /// \brief Password-based encryptor with MAC
 /// \tparam BC BlockCipher based class used for encryption
 /// \tparam H HashTransformation based class used for mashing
@@ -180,11 +173,11 @@ template <class BC, class H, class MAC, class Info>
 class DataEncryptorWithMAC : public ProxyFilter
 {
 public:
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
-	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
-	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH);
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE);
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS);
 
 	/// \brief Constructs a DataEncryptorWithMAC
 	/// \param passphrase a C-String password
@@ -206,7 +199,6 @@ private:
 
 };
 
-/// \class DataDecryptorWithMAC
 /// \brief Password-based decryptor with MAC
 /// \tparam BC BlockCipher based class used for encryption
 /// \tparam H HashTransformation based class used for mashing
@@ -226,11 +218,11 @@ template <class BC, class H, class MAC, class Info>
 class DataDecryptorWithMAC : public ProxyFilter
 {
 public:
-	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
-	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
-	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
-	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
-	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE);
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH);
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH);
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE);
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS);
 
 	/// \brief Constructs a DataDecryptor
 	/// \param passphrase a C-String password
@@ -259,49 +251,41 @@ private:
 };
 
 #if defined(CRYPTOPP_DOXYGEN_PROCESSING)
-/// \class LegacyEncryptor
 /// \brief Password-based encryptor (deprecated)
 /// \details Crypto++ 5.6.5 and earlier used the legacy algorithms, including DES_EDE2 and SHA1.
 ///   Crypto++ 5.7 switched to AES and SHA256. The updated algorithms are available with the
 ///   <tt>Default*</tt> classes, and the old algorithms are available with the <tt>Legacy*</tt> classes.
 struct LegacyEncryptor : public DataEncryptor<LegacyBlockCipher,LegacyHashModule,LegacyParametersInfo> {};
-/// \class LegacyDecryptor
 /// \brief Password-based decryptor (deprecated)
 /// \details Crypto++ 5.6.5 and earlier used the legacy algorithms, including DES_EDE2 and SHA1.
 ///   Crypto++ 5.7 switched to AES and SHA256. The updated algorithms are available with the
 ///   <tt>Default*</tt> classes, and the old algorithms are available with the <tt>Legacy*</tt> classes.
 struct LegacyDecryptor : public DataDecryptor<LegacyBlockCipher,LegacyHashModule,LegacyParametersInfo> {};
-/// \class DefaultEncryptor
 /// \brief Password-based encryptor
 /// \details Crypto++ 5.6.5 and earlier used the legacy algorithms, including DES_EDE2 and SHA1.
 ///   Crypto++ 5.7 switched to AES and SHA256. The updated algorithms are available with the
 ///   <tt>Default*</tt> classes, and the old algorithms are available with the <tt>Legacy*</tt> classes.
 struct DefaultEncryptor : public DataEncryptor<DefaultBlockCipher,DefaultHashModule,DefaultParametersInfo> {};
-/// \class DefaultDecryptor
 /// \brief Password-based decryptor
 /// \details Crypto++ 5.6.5 and earlier used the legacy algorithms, including DES_EDE2 and SHA1.
 ///   Crypto++ 5.7 switched to AES and SHA256. The updated algorithms are available with the
 ///   <tt>Default*</tt> classes, and the old algorithms are available with the <tt>Legacy*</tt> classes.
 struct DefaultDecryptor : public DataDecryptor<DefaultBlockCipher,DefaultHashModule,DefaultParametersInfo> {};
-/// \class LegacyEncryptorWithMAC
 /// \brief Password-based encryptor with MAC (deprecated)
 /// \details Crypto++ 5.6.5 and earlier used the legacy algorithms, including DES_EDE2 and SHA1.
 ///   Crypto++ 5.7 switched to AES and SHA256. The updated algorithms are available with the
 ///   <tt>Default*</tt> classes, and the old algorithms are available with the <tt>Legacy*</tt> classes.
-struct LegacyEncryptorWithMAC : public DataEncryptorWithMAC<LegacyBlockCipher,LegacyHashModule,DefaultMAC,LegacyParametersInfo> {};
-/// \class LegacyDecryptorWithMAC
+struct LegacyEncryptorWithMAC : public DataEncryptorWithMAC<LegacyBlockCipher,LegacyHashModule,LegacyMAC,LegacyParametersInfo> {};
 /// \brief Password-based decryptor with MAC (deprecated)
 /// \details Crypto++ 5.6.5 and earlier used the legacy algorithms, including DES_EDE2 and SHA1.
 ///   Crypto++ 5.7 switched to AES and SHA256. The updated algorithms are available with the
 ///   <tt>Default*</tt> classes, and the old algorithms are available with the <tt>Legacy*</tt> classes.
-struct LegacyDecryptorWithMAC : public DataDecryptorWithMAC<LegacyBlockCipher,LegacyHashModule,DefaultMAC,LegacyParametersInfo> {};
-/// \class DefaultEncryptorWithMAC
+struct LegacyDecryptorWithMAC : public DataDecryptorWithMAC<LegacyBlockCipher,LegacyHashModule,LegacyMAC,LegacyParametersInfo> {};
 /// \brief Password-based encryptor with MAC
 /// \details Crypto++ 5.6.5 and earlier used the legacy algorithms, including DES_EDE2 and SHA1.
 ///   Crypto++ 5.7 switched to AES and SHA256. The updated algorithms are available with the
 ///   <tt>Default*</tt> classes, and the old algorithms are available with the <tt>Legacy*</tt> classes.
 struct DefaultEncryptorWithMAC : public DataEncryptorWithMAC<DefaultBlockCipher,DefaultHashModule,DefaultMAC,DefaultParametersInfo> {};
-/// \class DefaultDecryptorWithMAC
 /// \brief Password-based decryptor with MAC
 /// \details Crypto++ 5.6.5 and earlier used the legacy algorithms, including DES_EDE2 and SHA1.
 ///   Crypto++ 5.7 switched to AES and SHA256. The updated algorithms are available with the
@@ -314,8 +298,8 @@ typedef DataDecryptor<LegacyBlockCipher,LegacyHashModule,LegacyParametersInfo> L
 typedef DataEncryptor<DefaultBlockCipher,DefaultHashModule,DefaultParametersInfo> DefaultEncryptor;
 typedef DataDecryptor<DefaultBlockCipher,DefaultHashModule,DefaultParametersInfo> DefaultDecryptor;
 
-typedef DataEncryptorWithMAC<LegacyBlockCipher,LegacyHashModule,DefaultMAC,LegacyParametersInfo> LegacyEncryptorWithMAC;
-typedef DataDecryptorWithMAC<LegacyBlockCipher,LegacyHashModule,DefaultMAC,LegacyParametersInfo> LegacyDecryptorWithMAC;
+typedef DataEncryptorWithMAC<LegacyBlockCipher,LegacyHashModule,LegacyMAC,LegacyParametersInfo> LegacyEncryptorWithMAC;
+typedef DataDecryptorWithMAC<LegacyBlockCipher,LegacyHashModule,LegacyMAC,LegacyParametersInfo> LegacyDecryptorWithMAC;
 
 typedef DataEncryptorWithMAC<DefaultBlockCipher,DefaultHashModule,DefaultMAC,DefaultParametersInfo> DefaultEncryptorWithMAC;
 typedef DataDecryptorWithMAC<DefaultBlockCipher,DefaultHashModule,DefaultMAC,DefaultParametersInfo> DefaultDecryptorWithMAC;

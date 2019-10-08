@@ -12,7 +12,6 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class EAX_Base
 /// \brief EAX block cipher base implementation
 /// \details Base implementation of the AuthenticatedSymmetricCipher interface
 /// \since Crypto++ 5.6.0
@@ -22,6 +21,8 @@ public:
 	// AuthenticatedSymmetricCipher
 	std::string AlgorithmName() const
 		{return GetMAC().GetCipher().AlgorithmName() + std::string("/EAX");}
+	std::string AlgorithmProvider() const
+		{return GetMAC().GetCipher().AlgorithmProvider();}
 	size_t MinKeyLength() const
 		{return GetMAC().MinKeyLength();}
 	size_t MaxKeyLength() const
@@ -67,7 +68,6 @@ protected:
 	CTR_Mode_ExternalCipher::Encryption m_ctr;
 };
 
-/// \class EAX_Final
 /// \brief EAX block cipher final implementation
 /// \tparam T_BlockCipher block cipher
 /// \tparam T_IsEncryption direction in which to operate the cipher
@@ -78,6 +78,8 @@ class EAX_Final : public EAX_Base
 public:
 	static std::string StaticAlgorithmName()
 		{return T_BlockCipher::StaticAlgorithmName() + std::string("/EAX");}
+	std::string AlgorithmProvider() const
+		{return m_cmac.AlgorithmProvider();}
 	bool IsForwardTransformation() const
 		{return T_IsEncryption;}
 
@@ -90,7 +92,6 @@ private:
 #undef EAX
 #endif
 
-/// \class EAX
 /// \brief EAX block cipher mode of operation
 /// \tparam T_BlockCipher block cipher
 /// \details \p EAX provides the \p Encryption and \p Decryption typedef. See EAX_Base

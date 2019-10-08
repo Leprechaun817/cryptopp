@@ -1,23 +1,13 @@
 // algparam.h - originally written and placed in the public domain by Wei Dai
 
-/// \file
-/// \headerfile algparam.h
+/// \file algparam.h
 /// \brief Classes for working with NameValuePairs
-
 
 #ifndef CRYPTOPP_ALGPARAM_H
 #define CRYPTOPP_ALGPARAM_H
 
 #include "config.h"
 #include "cryptlib.h"
-
-#if CRYPTOPP_MSC_VERSION
-# pragma warning(push)
-# pragma warning(disable: 4231 4275)
-# if (CRYPTOPP_MSC_VERSION >= 1400)
-#  pragma warning(disable: 6011 6386 28193)
-# endif
-#endif
 
 #include "smartptr.h"
 #include "secblock.h"
@@ -26,7 +16,6 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class ConstByteArrayParameter
 /// \brief Used to pass byte array input as part of a NameValuePairs object
 class ConstByteArrayParameter
 {
@@ -39,7 +28,7 @@ public:
 	ConstByteArrayParameter(const char *data = NULLPTR, bool deepCopy = false)
 		: m_deepCopy(false), m_data(NULLPTR), m_size(0)
 	{
-		Assign((const byte *)data, data ? strlen(data) : 0, deepCopy);
+		Assign(reinterpret_cast<const byte *>(data), data ? strlen(data) : 0, deepCopy);
 	}
 
 	/// \brief Construct a ConstByteArrayParameter
@@ -55,8 +44,8 @@ public:
 	}
 
 	/// \brief Construct a ConstByteArrayParameter
-	/// \tparam T a std::basic_string<char> class
-	/// \param string a std::basic_string<char> class
+	/// \tparam T a std::basic_string<char> or std::vector<byte> class
+	/// \param string a std::basic_string<char> or std::vector<byte> object
 	/// \param deepCopy flag indicating whether the data should be copied
 	/// \details The deepCopy option is used when the NameValuePairs object can't
 	///   keep a copy of the data available
@@ -64,7 +53,7 @@ public:
 		: m_deepCopy(false), m_data(NULLPTR), m_size(0)
 	{
 		CRYPTOPP_COMPILE_ASSERT(sizeof(typename T::value_type) == 1);
-		Assign((const byte *)string.data(), string.size(), deepCopy);
+		Assign(reinterpret_cast<const byte *>(&string[0]), string.size(), deepCopy);
 	}
 
 	/// \brief Assign contents from a memory buffer
@@ -101,7 +90,6 @@ private:
 	SecByteBlock m_block;
 };
 
-/// \class ByteArrayParameter
 /// \brief Used to pass byte array input as part of a NameValuePairs object
 class ByteArrayParameter
 {
@@ -129,7 +117,6 @@ private:
 	size_t m_size;
 };
 
-/// \class CombinedNameValuePairs
 /// \brief Combines two sets of NameValuePairs
 /// \details CombinedNameValuePairs allows you to provide two sets of of NameValuePairs.
 ///   If a name is not found in the first set, then the second set is searched for the
@@ -308,12 +295,10 @@ CRYPTOPP_DLL bool AssignIntToInteger(const std::type_info &valueType, void *pInt
 
 CRYPTOPP_DLL const std::type_info & CRYPTOPP_API IntegerTypeId();
 
-/// \class AlgorithmParametersBase
 /// \brief Base class for AlgorithmParameters
 class CRYPTOPP_DLL AlgorithmParametersBase
 {
 public:
-	/// \class ParameterNotUsed
 	/// \brief Exception thrown when an AlgorithmParameter is unused
 	class ParameterNotUsed : public Exception
 	{
@@ -323,8 +308,11 @@ public:
 
 	virtual ~AlgorithmParametersBase() CRYPTOPP_THROW
 	{
-#ifdef CRYPTOPP_UNCAUGHT_EXCEPTION_AVAILABLE
-		if (!std::uncaught_exception())
+
+#if defined(CRYPTOPP_CXX17_EXCEPTIONS)
+		if (std::uncaught_exceptions() == 0)
+#elif defined(CRYPTOPP_UNCAUGHT_EXCEPTION_AVAILABLE)
+		if (std::uncaught_exception() == false)
 #else
 		try
 #endif
@@ -332,10 +320,12 @@ public:
 			if (m_throwIfNotUsed && !m_used)
 				throw ParameterNotUsed(m_name);
 		}
-#ifndef CRYPTOPP_UNCAUGHT_EXCEPTION_AVAILABLE
+#if !defined(CRYPTOPP_UNCAUGHT_EXCEPTION_AVAILABLE)
+# if !defined(CRYPTOPP_CXX17_EXCEPTIONS)
 		catch(const Exception&)
 		{
 		}
+# endif
 #endif
 	}
 
@@ -370,7 +360,6 @@ protected:
 	member_ptr<AlgorithmParametersBase> m_next;
 };
 
-/// \class AlgorithmParametersTemplate
 /// \brief Template base class for AlgorithmParameters
 /// \tparam T the class or type
 template <class T>
@@ -423,7 +412,6 @@ CRYPTOPP_DLL_TEMPLATE_CLASS AlgorithmParametersTemplate<bool>;
 CRYPTOPP_DLL_TEMPLATE_CLASS AlgorithmParametersTemplate<int>;
 CRYPTOPP_DLL_TEMPLATE_CLASS AlgorithmParametersTemplate<ConstByteArrayParameter>;
 
-/// \class AlgorithmParameters
 /// \brief An object that implements NameValuePairs
 /// \note A NameValuePairs object containing an arbitrary number of name value pairs may be constructed by
 ///   repeatedly using operator() on the object returned by MakeParameters, for example:
@@ -522,11 +510,6 @@ AlgorithmParameters MakeParameters(const char *name, const T &value, bool throwI
 #define CRYPTOPP_GET_FUNCTION_ENTRY(name)		(Name::name(), &ThisClass::Get##name)
 #define CRYPTOPP_SET_FUNCTION_ENTRY(name)		(Name::name(), &ThisClass::Set##name)
 #define CRYPTOPP_SET_FUNCTION_ENTRY2(name1, name2)	(Name::name1(), Name::name2(), &ThisClass::Set##name1##And##name2)
-
-// TODO: fix 6011 when the API/ABI can change
-#if (CRYPTOPP_MSC_VERSION >= 1400)
-# pragma warning(pop)
-#endif
 
 NAMESPACE_END
 

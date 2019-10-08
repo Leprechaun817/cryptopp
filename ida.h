@@ -11,19 +11,19 @@
 #include "filters.h"
 #include "channels.h"
 #include "secblock.h"
+#include "gf2_32.h"
 #include "stdcpp.h"
 #include "misc.h"
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class RawIDA
 /// \brief Secret sharing and information dispersal base class
 /// \since Crypto++ 1.0
 class RawIDA : public AutoSignaling<Unflushable<Multichannel<Filter> > >
 {
 public:
 	RawIDA(BufferedTransformation *attachment=NULLPTR)
-		: m_threshold (0), m_channelsReady(0), m_channelsFinished(0)
+		: m_channelsReady(0), m_channelsFinished(0), m_threshold (0)
 			{Detach(attachment);}
 
 	unsigned int GetThreshold() const {return m_threshold;}
@@ -57,13 +57,13 @@ protected:
 	std::vector<word32> m_inputChannelIds, m_outputChannelIds, m_outputToInput;
 	std::vector<std::string> m_outputChannelIdStrings;
 	std::vector<ByteQueue> m_outputQueues;
-	int m_threshold;
-	unsigned int m_channelsReady, m_channelsFinished;
 	std::vector<SecBlock<word32> > m_v;
 	SecBlock<word32> m_u, m_w, m_y;
+	const GF2_32 m_gf32;
+	unsigned int m_channelsReady, m_channelsFinished;
+	int m_threshold;
 };
 
-/// \class SecretSharing
 /// \brief Shamir's Secret Sharing Algorithm
 /// \details SecretSharing is a variant of Shamir's secret sharing algorithm
 /// \sa SecretRecovery, SecretRecovery, InformationDispersal, InformationRecovery
@@ -89,7 +89,6 @@ protected:
 	bool m_pad;
 };
 
-/// \class SecretRecovery
 /// \brief Shamir's Secret Sharing Algorithm
 /// \details SecretSharing is a variant of Shamir's secret sharing algorithm
 /// \sa SecretRecovery, SecretRecovery, InformationDispersal, InformationRecovery
@@ -113,7 +112,6 @@ protected:
 
 /// a variant of Rabin's Information Dispersal Algorithm
 
-/// \class InformationDispersal
 /// \brief Rabin's Information Dispersal Algorithm
 /// \details InformationDispersal is a variant of Rabin's information dispersal algorithm
 /// \sa SecretRecovery, SecretRecovery, InformationDispersal, InformationRecovery
@@ -139,7 +137,6 @@ protected:
 	unsigned int m_nextChannel;
 };
 
-/// \class InformationRecovery
 /// \brief Rabin's Information Dispersal Algorithm
 /// \details InformationDispersal is a variant of Rabin's information dispersal algorithm
 /// \sa SecretRecovery, SecretRecovery, InformationDispersal, InformationRecovery

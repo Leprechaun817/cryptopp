@@ -4,6 +4,14 @@
 # building the docs. Before running the script, copy it to the root
 # directory. After running this script, you can 'make docs'
 
-sed -i 's|Library 6.0 API|Library 5.6.5 API|g' cryptlib.h
-sed -i 's|= 6.0|= 5.6.5|g' Doxyfile
-sed -i 's|CRYPTOPP_VERSION 600|CRYPTOPP_VERSION 565|g' config.h
+sed 's|Library 8.3 API|Library 8.2 API|g' cryptlib.h > cryptlib.h.new
+mv cryptlib.h.new cryptlib.h
+
+sed 's|= 8.3|= 8.2|g' Doxyfile > Doxyfile.new
+mv Doxyfile.new Doxyfile
+
+sed 's|CRYPTOPP_MINOR 3|CRYPTOPP_MINOR 2|g' config_ver.h > config_ver.h.new
+mv config_ver.h.new config_ver.h
+
+sed 's|CRYPTOPP_VERSION 830|CRYPTOPP_VERSION 820|g' config_ver.h > config_ver.h.new
+mv config_ver.h.new config_ver.h

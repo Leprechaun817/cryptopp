@@ -12,19 +12,20 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class TEA_Info
 /// \brief TEA block cipher information
 struct TEA_Info : public FixedBlockSize<8>, public FixedKeyLength<16>, public VariableRounds<32>
 {
+	/// \brief The algorithm name
+	/// \returns the algorithm name
+	/// \details StaticAlgorithmName returns the algorithm's name as a static
+	///   member function.
 	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() {return "TEA";}
 };
 
-/// \class TEA
 /// \brief TEA block cipher
 /// \sa <a href="http://www.cryptopp.com/wiki/TEA">TEA</a>
 class TEA : public TEA_Info, public BlockCipherDocumentation
 {
-	/// \class Base
 	/// \brief TEA block cipher default operation
 	class CRYPTOPP_NO_VTABLE Base : public BlockCipherImpl<TEA_Info>
 	{
@@ -36,7 +37,6 @@ class TEA : public TEA_Info, public BlockCipherDocumentation
 		word32 m_limit;
 	};
 
-	/// \class Enc
 	/// \brief TEA block cipher encryption operation
 	class CRYPTOPP_NO_VTABLE Enc : public Base
 	{
@@ -44,7 +44,6 @@ class TEA : public TEA_Info, public BlockCipherDocumentation
 		void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
 	};
 
-	/// \class Dec
 	/// \brief TEA block cipher decryption operation
 	class CRYPTOPP_NO_VTABLE Dec : public Base
 	{
@@ -60,19 +59,20 @@ public:
 typedef TEA::Encryption TEAEncryption;
 typedef TEA::Decryption TEADecryption;
 
-/// \class XTEA_Info
 /// \brief XTEA block cipher information
 struct XTEA_Info : public FixedBlockSize<8>, public FixedKeyLength<16>, public VariableRounds<32>
 {
+	/// \brief The algorithm name
+	/// \returns the algorithm name
+	/// \details StaticAlgorithmName returns the algorithm's name as a static
+	///   member function.
 	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() {return "XTEA";}
 };
 
-/// \class XTEA
 /// \brief XTEA block cipher
 /// \sa <a href="http://www.cryptopp.com/wiki/TEA">XTEA</a>
 class XTEA : public XTEA_Info, public BlockCipherDocumentation
 {
-	/// \class Base
 	/// \brief XTEA block cipher default operation
 	class CRYPTOPP_NO_VTABLE Base : public BlockCipherImpl<XTEA_Info>
 	{
@@ -84,7 +84,6 @@ class XTEA : public XTEA_Info, public BlockCipherDocumentation
 		word32 m_limit;
 	};
 
-	/// \class Enc
 	/// \brief XTEA block cipher encryption operation
 	class CRYPTOPP_NO_VTABLE Enc : public Base
 	{
@@ -92,7 +91,6 @@ class XTEA : public XTEA_Info, public BlockCipherDocumentation
 		void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
 	};
 
-	/// \class Dec
 	/// \brief XTEA block cipher decryption operation
 	class CRYPTOPP_NO_VTABLE Dec : public Base
 	{
@@ -105,22 +103,24 @@ public:
 	typedef BlockCipherFinal<DECRYPTION, Dec> Decryption;
 };
 
-/// \class BTEA_Info
 /// \brief BTEA block cipher information
 struct BTEA_Info : public FixedKeyLength<16>
 {
+	/// \brief The algorithm name
+	/// \returns the algorithm name
+	/// \details StaticAlgorithmName returns the algorithm's name as a static
+	///   member function.
 	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() {return "BTEA";}
 };
 
-/// \class BTEA
 /// \brief BTEA block cipher
 /// \details Corrected Block TEA as described in "xxtea". This class hasn't been tested yet.
-/// \sa <a href="http://www.cryptopp.com/wiki/TEA">Corrected Block TEA</a>.
+/// \sa <A HREF="http://www.movable-type.co.uk/scripts/xxtea.pdf">Correction to xtea</A> and
+///   <a href="http://www.cryptopp.com/wiki/TEA">Corrected Block TEA</a>.
 class BTEA : public BTEA_Info, public BlockCipherDocumentation
 {
-	/// \class Base
 	/// \brief BTEA block cipher default operation
-	class CRYPTOPP_NO_VTABLE Base : public AlgorithmImpl<SimpleKeyingInterfaceImpl<BlockCipher, BTEA_Info>, BTEA_Info>, public BTEA_Info
+	class CRYPTOPP_NO_VTABLE Base : public AlgorithmImpl<SimpleKeyingInterfaceImpl<BlockCipher, BTEA_Info>, BTEA_Info>
 	{
 	public:
 		void UncheckedSetKey(const byte *key, unsigned int length, const NameValuePairs &params)
@@ -137,7 +137,6 @@ class BTEA : public BTEA_Info, public BlockCipherDocumentation
 		unsigned int m_blockSize;
 	};
 
-	/// \class Enc
 	/// \brief BTEA block cipher encryption operation
 	class CRYPTOPP_NO_VTABLE Enc : public Base
 	{
@@ -145,7 +144,6 @@ class BTEA : public BTEA_Info, public BlockCipherDocumentation
 		void ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const;
 	};
 
-	/// \class Dec
 	/// \brief BTEA block cipher decryption operation
 	class CRYPTOPP_NO_VTABLE Dec : public Base
 	{

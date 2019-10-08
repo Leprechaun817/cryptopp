@@ -12,14 +12,12 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class SHACAL2_Info
 /// \brief SHACAL2 block cipher information
 struct SHACAL2_Info : public FixedBlockSize<32>, public VariableKeyLength<16, 16, 64>
 {
 	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() {return "SHACAL-2";}
 };
 
-/// \class SHACAL2
 /// \brief SHACAL2 block cipher
 /// \since Crypto++ 5.2, Intel SHA since Crypto++ 6.0
 /// \sa <a href="http://www.cryptopp.com/wiki/SHACAL-2">SHACAL-2</a>
@@ -30,6 +28,7 @@ class SHACAL2 : public SHACAL2_Info, public BlockCipherDocumentation
 	class CRYPTOPP_NO_VTABLE Base : public BlockCipherImpl<SHACAL2_Info>
 	{
 	public:
+		std::string AlgorithmProvider() const;
 		void UncheckedSetKey(const byte *userKey, unsigned int length, const NameValuePairs &params);
 
 	protected:
@@ -39,7 +38,7 @@ class SHACAL2 : public SHACAL2_Info, public BlockCipherDocumentation
 	};
 
 	/// \brief SHACAL2 block cipher transformation functions
-	/// \details Provides implementation for encryption transformation
+	/// \details Encryption transformation
 	class CRYPTOPP_NO_VTABLE Enc : public Base
 	{
 	public:
@@ -47,7 +46,7 @@ class SHACAL2 : public SHACAL2_Info, public BlockCipherDocumentation
 	};
 
 	/// \brief SHACAL2 block cipher transformation functions
-	/// \details Provides implementation for decryption transformation
+	/// \details Decryption transformation
 	class CRYPTOPP_NO_VTABLE Dec : public Base
 	{
 	public:

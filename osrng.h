@@ -14,13 +14,13 @@
 #include "randpool.h"
 #include "smartptr.h"
 #include "fips140.h"
+#include "hkdf.h"
 #include "rng.h"
 #include "aes.h"
 #include "sha.h"
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class OS_RNG_Err
 /// \brief Exception thrown when an operating system error is encountered
 class CRYPTOPP_DLL OS_RNG_Err : public Exception
 {
@@ -33,7 +33,6 @@ public:
 #ifdef NONBLOCKING_RNG_AVAILABLE
 
 #ifdef CRYPTOPP_WIN32_AVAILABLE
-/// \class MicrosoftCryptoProvider
 /// \brief Wrapper for Microsoft crypto service provider
 /// \sa \def USE_MS_CRYPTOAPI, \def USE_MS_CNGAPI
 class CRYPTOPP_DLL MicrosoftCryptoProvider
@@ -80,7 +79,6 @@ private:
 
 #endif // CRYPTOPP_WIN32_AVAILABLE
 
-/// \class NonblockingRng
 /// \brief Wrapper class for /dev/random and /dev/srandom
 /// \details Encapsulates CryptoAPI's CryptGenRandom() or CryptoNG's BCryptGenRandom()
 ///   on Windows, or /dev/urandom on Unix and compatibles.
@@ -112,7 +110,6 @@ protected:
 
 #if defined(BLOCKING_RNG_AVAILABLE) || defined(CRYPTOPP_DOXYGEN_PROCESSING)
 
-/// \class BlockingRng
 /// \brief Wrapper class for /dev/random and /dev/srandom
 /// \details Encapsulates /dev/random on Linux, OS X and Unix; and /dev/srandom on the BSDs.
 /// \note On Linux the /dev/random interface is effectively deprecated. According to the
@@ -153,7 +150,6 @@ protected:
 ///  by way of BlockingRng, if available.
 CRYPTOPP_DLL void CRYPTOPP_API OS_GenerateRandomBlock(bool blocking, byte *output, size_t size);
 
-/// \class AutoSeededRandomPool
 /// \brief Automatically Seeded Randomness Pool
 /// \details This class seeds itself using an operating system provided RNG.
 ///    AutoSeededRandomPool was suggested by Leonard Janke.
@@ -178,7 +174,6 @@ public:
 	void Reseed(bool blocking = false, unsigned int seedSize = 32);
 };
 
-/// \class AutoSeededX917RNG
 /// \tparam BLOCK_CIPHER a block cipher
 /// \brief Automatically Seeded X9.17 RNG
 /// \details AutoSeededX917RNG is from ANSI X9.17 Appendix C, seeded using an OS provided RNG.
@@ -191,7 +186,9 @@ template <class BLOCK_CIPHER>
 class AutoSeededX917RNG : public RandomNumberGenerator, public NotCopyable
 {
 public:
-	static std::string StaticAlgorithmName() { return std::string("AutoSeededX917RNG(") + BLOCK_CIPHER::StaticAlgorithmName() + std::string(")"); }
+	static std::string StaticAlgorithmName() {
+		return std::string("AutoSeededX917RNG(") + BLOCK_CIPHER::StaticAlgorithmName() + std::string(")");
+	}
 
 	~AutoSeededX917RNG() {}
 
@@ -227,6 +224,8 @@ public:
 	void GenerateIntoBufferedTransformation(BufferedTransformation &target, const std::string &channel, lword length)
 		{m_rng->GenerateIntoBufferedTransformation(target, channel, length);}
 
+	std::string AlgorithmProvider() const;
+
 private:
 	member_ptr<RandomNumberGenerator> m_rng;
 };
@@ -240,29 +239,44 @@ void AutoSeededX917RNG<BLOCK_CIPHER>::Reseed(const byte *key, size_t keylength, 
 template <class BLOCK_CIPHER>
 void AutoSeededX917RNG<BLOCK_CIPHER>::Reseed(bool blocking, const byte *input, size_t length)
 {
-	SecByteBlock seed(BLOCK_CIPHER::BLOCKSIZE + BLOCK_CIPHER::DEFAULT_KEYLENGTH);
-	const byte *key;
+	enum {BlockSize=BLOCK_CIPHER::BLOCKSIZE};
+	enum {KeyLength=BLOCK_CIPHER::DEFAULT_KEYLENGTH};
+	enum {SeedSize=BlockSize + KeyLength};
+
+	SecByteBlock seed(SeedSize), temp(SeedSize);
+	const byte label[] = "X9.17 key generation";
+	const byte *key=NULLPTR;
+
 	do
 	{
-		OS_GenerateRandomBlock(blocking, seed, seed.size());
-		if (length > 0)
-		{
-			SHA256 hash;
-			hash.Update(seed, seed.size());
-			hash.Update(input, length);
-			hash.TruncatedFinal(seed, UnsignedMin(hash.DigestSize(), seed.size()));
-		}
-		key = seed + BLOCK_CIPHER::BLOCKSIZE;
-	}	// check that seed and key don't have same value
-	while (memcmp(key, seed, STDMIN((unsigned int)BLOCK_CIPHER::BLOCKSIZE, (unsigned int)BLOCK_CIPHER::DEFAULT_KEYLENGTH)) == 0);
+		OS_GenerateRandomBlock(blocking, temp, temp.size());
 
-	Reseed(key, BLOCK_CIPHER::DEFAULT_KEYLENGTH, seed, NULLPTR);
+		HKDF<SHA256> hkdf;
+		hkdf.DeriveKey(
+			seed, seed.size(),  // derived secret
+			temp, temp.size(),  // instance secret
+			input, length,      // user secret
+			label, 20           // unique label
+		);
+
+		key = seed + BlockSize;
+	}	// check that seed and key don't have same value
+	while (memcmp(key, seed, STDMIN((size_t)BlockSize, (size_t)KeyLength)) == 0);
+
+	Reseed(key, KeyLength, seed, NULLPTR);
+}
+
+template <class BLOCK_CIPHER>
+std::string AutoSeededX917RNG<BLOCK_CIPHER>::AlgorithmProvider() const
+{
+	// Hack for now... We need to instantiate one
+	typename BLOCK_CIPHER::Encryption bc;
+	return bc.AlgorithmProvider();
 }
 
 CRYPTOPP_DLL_TEMPLATE_CLASS AutoSeededX917RNG<AES>;
 
 #if defined(CRYPTOPP_DOXYGEN_PROCESSING)
-/// \class DefaultAutoSeededRNG
 /// \brief A typedef providing a default generator
 /// \details DefaultAutoSeededRNG is a typedef of either AutoSeededX917RNG<AES> or AutoSeededRandomPool.
 ///   If CRYPTOPP_ENABLE_COMPLIANCE_WITH_FIPS_140_2 is defined, then DefaultAutoSeededRNG is

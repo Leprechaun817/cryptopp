@@ -13,7 +13,6 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class BaseN_Encoder
 /// \brief Encoder for bases that are a power of 2
 class CRYPTOPP_DLL BaseN_Encoder : public Unflushable<Filter>
 {
@@ -37,10 +36,12 @@ public:
 		, m_outputBlockSize(0), m_bytePos(0), m_bitPos(0)
 	{
 		Detach(attachment);
-		IsolatedInitialize(MakeParameters(Name::EncodingLookupArray(), alphabet)
-			(Name::Log2Base(), log2base)
-			(Name::Pad(), padding != -1)
-			(Name::PaddingByte(), byte(padding)));
+		BaseN_Encoder::IsolatedInitialize(
+			MakeParameters
+				(Name::EncodingLookupArray(), alphabet)
+				(Name::Log2Base(), log2base)
+				(Name::Pad(), padding != -1)
+				(Name::PaddingByte(), byte(padding)));
 	}
 
 	void IsolatedInitialize(const NameValuePairs &parameters);
@@ -53,7 +54,6 @@ private:
 	SecByteBlock m_outBuf;
 };
 
-/// \class BaseN_Decoder
 /// \brief Decoder for bases that are a power of 2
 class CRYPTOPP_DLL BaseN_Decoder : public Unflushable<Filter>
 {
@@ -63,7 +63,7 @@ public:
 	/// \details padding is set to -1, which means use default padding. If not
 	///   required, then the value must be set via IsolatedInitialize().
 	BaseN_Decoder(BufferedTransformation *attachment=NULLPTR)
-		: m_lookup(NULLPTR), m_padding(0), m_bitsPerChar(0)
+		: m_lookup(NULLPTR), m_bitsPerChar(0)
 		, m_outputBlockSize(0), m_bytePos(0), m_bitPos(0)
 			{Detach(attachment);}
 
@@ -76,11 +76,14 @@ public:
 	/// \details padding is set to -1, which means use default padding. If not
 	///   required, then the value must be set via IsolatedInitialize().
 	BaseN_Decoder(const int *lookup, int log2base, BufferedTransformation *attachment=NULLPTR)
-		: m_lookup(NULLPTR), m_padding(0), m_bitsPerChar(0)
+		: m_lookup(NULLPTR), m_bitsPerChar(0)
 		, m_outputBlockSize(0), m_bytePos(0), m_bitPos(0)
 	{
 		Detach(attachment);
-		IsolatedInitialize(MakeParameters(Name::DecodingLookupArray(), lookup)(Name::Log2Base(), log2base));
+		BaseN_Decoder::IsolatedInitialize(
+			MakeParameters
+				(Name::DecodingLookupArray(), lookup)
+				(Name::Log2Base(), log2base));
 	}
 
 	void IsolatedInitialize(const NameValuePairs &parameters);
@@ -100,12 +103,11 @@ public:
 
 private:
 	const int *m_lookup;
-	int m_padding, m_bitsPerChar, m_outputBlockSize;
+	int m_bitsPerChar, m_outputBlockSize;
 	int m_bytePos, m_bitPos;
 	SecByteBlock m_outBuf;
 };
 
-/// \class Grouper
 /// \brief Filter that breaks input stream into groups of fixed size
 class CRYPTOPP_DLL Grouper : public Bufferless<Filter>
 {
@@ -124,9 +126,11 @@ public:
 		: m_groupSize(0), m_counter(0)
 	{
 		Detach(attachment);
-		IsolatedInitialize(MakeParameters(Name::GroupSize(), groupSize)
-			(Name::Separator(), ConstByteArrayParameter(separator))
-			(Name::Terminator(), ConstByteArrayParameter(terminator)));
+		Grouper::IsolatedInitialize(
+			MakeParameters
+				(Name::GroupSize(), groupSize)
+				(Name::Separator(), ConstByteArrayParameter(separator))
+				(Name::Terminator(), ConstByteArrayParameter(terminator)));
 	}
 
 	void IsolatedInitialize(const NameValuePairs &parameters);

@@ -12,12 +12,14 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class CMAC_Base
 /// \brief CMAC base implementation
 /// \since Crypto++ 5.6.0
 class CRYPTOPP_DLL CRYPTOPP_NO_VTABLE CMAC_Base : public MessageAuthenticationCode
 {
 public:
+
+	virtual ~CMAC_Base() {}
+
 	CMAC_Base() : m_counter(0) {}
 
 	void UncheckedSetKey(const byte *key, unsigned int length, const NameValuePairs &params);
@@ -26,6 +28,7 @@ public:
 	unsigned int DigestSize() const {return GetCipher().BlockSize();}
 	unsigned int OptimalBlockSize() const {return GetCipher().BlockSize();}
 	unsigned int OptimalDataAlignment() const {return GetCipher().OptimalDataAlignment();}
+	std::string AlgorithmProvider() const {return GetCipher().AlgorithmProvider();}
 
 protected:
 	friend class EAX_Base;

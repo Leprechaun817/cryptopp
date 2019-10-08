@@ -4,14 +4,13 @@ os:
   - linux
   - osx
 
-dist: trusty
-sudo: false
+dist: xenial
+sudo: required
 
-# OS X only supports one image. Use the latest.
-osx_image: xcode8.2
+osx_image: xcode10.1
 
 git:
-  depth: 3
+  depth: 5
 
 compiler:
   - clang
@@ -20,6 +19,11 @@ compiler:
 env:
   global:
     - BUILD_JOBS=2
+    - ANDROID_HOME="$HOME/.android"
+    - ANDROID_SDK="$HOME/android/sdk/"
+    - ANDROID_NDK="$HOME/android/sdk/ndk-bundle"
+    - ANDROID_SDK_ROOT="$ANDROID_SDK"
+    - ANDROID_NDK_ROOT="$ANDROID_NDK"
 
   matrix:
     - BUILD_MODE="all"
@@ -28,10 +32,6 @@ env:
     - BUILD_MODE="debug"
     - BUILD_MODE="asan"
     - BUILD_MODE="ubsan"
-    - BUILD_MODE="ios-arm"
-    - BUILD_MODE="ios-arm64"
-    - BUILD_MODE="ios-watch"
-    - BUILD_MODE="ios-tv"
 
 matrix:
 
@@ -39,46 +39,183 @@ matrix:
     # Skip GCC on OS X entirely
     - os: osx
       compiler: gcc
-    # Skip UBsan due to GCC 4.8
+
+  include:
     - os: linux
-      compiler: gcc
-      env: BUILD_MODE="ubsan"
-    # Skip UBsan due to Clang 3.4
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=autotools
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=cmake
     - os: osx
-      compiler: clang
-      env: BUILD_MODE="ubsan"
-    # No iOS builds on Linux
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=autotools
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=cmake
     - os: linux
-      env: BUILD_MODE="ios-arm"
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=armeabi-v7a
     - os: linux
-      env: BUILD_MODE="ios-arm64"
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=armv7a-neon
     - os: linux
-      env: BUILD_MODE="ios-watch"
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=aarch64
     - os: linux
-      env: BUILD_MODE="ios-tv"
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=mipsel
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=mipsel64
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=x86
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=x86_64
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=iPhoneOS
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=Arm64
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=WatchOS
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=AppleTVOS
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=WatchSimulator
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=AppleTVSimulator
 
   allow_failures:
     - os: osx
-      env: BUILD_MODE="ios-watch"
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=WatchOS
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=iPhoneSimulator
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=WatchSimulator
+    - os: osx
+      env:
+        - BUILD_OS=osx
+        - BUILD_MODE=ios
+        - PLATFORM=AppleTVSimulator
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=armeabi
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=mipsel
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=mipsel64
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=aarch64
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=armeabi-v7a
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=armv7a-neon
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=x86
+    - os: linux
+      env:
+        - BUILD_OS=linux
+        - BUILD_MODE=android
+        - PLATFORM=x86_64
+
+before_install:
+  - |
+    if [[ "$BUILD_OS" == "linux" ]] && [[ "$BUILD_MODE" == "android" ]]; then
+        # https://github.com/travis-ci/travis-ci/issues/9037
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A145
+        sudo apt-get update
+        source TestScripts/setenv-travis.sh
+        bash TestScripts/install-android.sh
+    fi
+    if [[ "$BUILD_OS" == "linux" ]] && [[ "$BUILD_MODE" == "autotools" ]]; then
+        # https://github.com/travis-ci/travis-ci/issues/9037
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A145
+        sudo apt-get install -y autoconf automake libtool
+    fi
 
 script:
   - |
-    if [[ "$BUILD_MODE" == "ios-arm" ]]; then
-        cp ./TestScripts/setenv-ios.sh .
-        . ./setenv-ios.sh arm
-        make -f GNUmakefile-cross -j "$BUILD_JOBS"
-    elif [[ "$BUILD_MODE" == "ios-arm64" ]]; then
-        cp ./TestScripts/setenv-ios.sh .
-        . ./setenv-ios.sh arm64 -j "$BUILD_JOBS"
-        make -f GNUmakefile-cross
-    elif [[ "$BUILD_MODE" == "ios-watch" ]]; then
-        cp ./TestScripts/setenv-ios.sh .
-        . ./setenv-ios.sh watch
-        make -f GNUmakefile-cross -j "$BUILD_JOBS"
-    elif [[ "$BUILD_MODE" == "ios-tv" ]]; then
-        cp ./TestScripts/setenv-ios.sh .
-        . ./setenv-ios.sh tv
-        make -f GNUmakefile-cross -j  "$BUILD_JOBS"
+    if [[ "$BUILD_MODE" == "ios" ]]; then
+        cp TestScripts/setenv-ios.sh .
+        cp TestScripts/cryptest-ios.sh .
+        bash cryptest-ios.sh
+    elif [[ "$BUILD_MODE" == "android" ]]; then
+        cp TestScripts/setenv-android-gcc.sh .
+        cp TestScripts/cryptest-android.sh .
+        bash cryptest-android.sh
+    elif [[ "$BUILD_MODE" == "autotools" ]]; then
+        cp TestScripts/cryptest-autotools.sh .
+        bash cryptest-autotools.sh
+    elif [[ "$BUILD_MODE" == "cmake" ]]; then
+        cp TestScripts/cryptest-cmake.sh .
+        bash cryptest-cmake.sh
     elif [[ "$BUILD_MODE" == "debug" ]]; then
         CXXFLAGS="-DDEBUG -g2 -O1" make -j "$BUILD_JOBS"
         ./cryptest.exe v
@@ -95,7 +232,7 @@ branches:
     - master
 
 addons:
-  sonarcloud: true
+  sonarcloud: false
 
   coverity_scan:
     project:

@@ -30,7 +30,6 @@ NAMESPACE_BEGIN(CryptoPP)
 
 CRYPTOPP_DLL_TEMPLATE_CLASS DL_GroupParameters<Integer>;
 
-/// \class DL_GroupParameters_IntegerBased
 /// \brief Integer-based GroupParameters specialization
 class CRYPTOPP_DLL CRYPTOPP_NO_VTABLE DL_GroupParameters_IntegerBased : public ASN1CryptoMaterial<DL_GroupParameters<Integer> >
 {
@@ -70,10 +69,29 @@ public:
     void BERDecode(BufferedTransformation &bt);
     void DEREncode(BufferedTransformation &bt) const;
 
-    // GeneratibleCryptoMaterial interface
-    /*! parameters: (ModulusSize, SubgroupOrderSize (optional)) */
+    /// \brief Generate a random key
+    /// \param rng a RandomNumberGenerator to produce keying material
+    /// \param alg additional initialization parameters
+    /// \details Recognised NameValuePairs are ModulusSize and
+    ///  SubgroupOrderSize (optional)
+    /// \throws KeyingErr if a key can't be generated or algorithm parameters
+    ///  are invalid
     void GenerateRandom(RandomNumberGenerator &rng, const NameValuePairs &alg);
+
+    /// \brief Get a named value
+    /// \param name the name of the object or value to retrieve
+    /// \param valueType reference to a variable that receives the value
+    /// \param pValue void pointer to a variable that receives the value
+    /// \returns true if the value was retrieved, false otherwise
+    /// \details GetVoidValue() retrieves the value of name if it exists.
+    /// \note GetVoidValue() is an internal function and should be implemented
+    ///   by derived classes. Users should use one of the other functions instead.
+    /// \sa GetValue(), GetValueWithDefault(), GetIntValue(), GetIntValueWithDefault(),
+    ///   GetRequiredParameter() and GetRequiredIntParameter()
     bool GetVoidValue(const char *name, const std::type_info &valueType, void *pValue) const;
+
+    /// \brief Initialize or reinitialize this key
+    /// \param source NameValuePairs to assign
     void AssignFrom(const NameValuePairs &source);
 
     // DL_GroupParameters
@@ -81,25 +99,69 @@ public:
     Integer GetGroupOrder() const {return GetFieldType() == 1 ? GetModulus()-Integer::One() : GetModulus()+Integer::One();}
     bool ValidateGroup(RandomNumberGenerator &rng, unsigned int level) const;
     bool ValidateElement(unsigned int level, const Integer &element, const DL_FixedBasePrecomputation<Integer> *precomp) const;
+
+    /// \brief Determine if subgroup membership check is fast
+    /// \returns true or false
     bool FastSubgroupCheckAvailable() const {return GetCofactor() == 2;}
 
-    // Cygwin i386 crash at -O3; see http://github.com/weidai11/cryptopp/issues/40.
+    /// \brief Encodes the element
+    /// \param reversible flag indicating the encoding format
+    /// \param element reference to the element to encode
+    /// \param encoded destination byte array for the encoded element
+    /// \details EncodeElement() must be implemented in a derived class.
+    /// \pre <tt>COUNTOF(encoded) == GetEncodedElementSize()</tt>
+    /// \sa GetEncodedElementSize(), DecodeElement(), <A
+    ///  HREF="http://github.com/weidai11/cryptopp/issues/40">Cygwin
+    ///  i386 crash at -O3</A>
     void EncodeElement(bool reversible, const Element &element, byte *encoded) const;
+
+    /// \brief Retrieve the encoded element's size
+    /// \param reversible flag indicating the encoding format
+    /// \returns encoded element's size, in bytes
+    /// \details The format of the encoded element varies by the underlying
+    ///  type of the element and the reversible flag.
+    /// \sa EncodeElement(), DecodeElement()
     unsigned int GetEncodedElementSize(bool reversible) const;
 
+    /// \brief Decodes the element
+    /// \param encoded byte array with the encoded element
+    /// \param checkForGroupMembership flag indicating if the element should be validated
+    /// \returns Element after decoding
+    /// \details DecodeElement() must be implemented in a derived class.
+    /// \pre <tt>COUNTOF(encoded) == GetEncodedElementSize()</tt>
+    /// \sa GetEncodedElementSize(), EncodeElement()
     Integer DecodeElement(const byte *encoded, bool checkForGroupMembership) const;
+
+    /// \brief Converts an element to an Integer
+    /// \param element the element to convert to an Integer
+    /// \returns Element after converting to an Integer
+    /// \details ConvertElementToInteger() must be implemented in a derived class.
     Integer ConvertElementToInteger(const Element &element) const
         {return element;}
-    Integer GetMaxExponent() const;
-    static std::string CRYPTOPP_API StaticAlgorithmNamePrefix() {return "";}
 
+    /// \brief Retrieve the maximum exponent for the group
+    /// \returns the maximum exponent for the group
+    Integer GetMaxExponent() const;
+
+    /// \brief Retrieve the OID of the algorithm
+    /// \returns OID of the algorithm
     OID GetAlgorithmID() const;
 
+    /// \brief Retrieve the modulus for the group
+    /// \returns the modulus for the group
     virtual const Integer & GetModulus() const =0;
+
+    /// \brief Set group parameters
+    /// \param p the prime modulus
+    /// \param g the group generator
     virtual void SetModulusAndSubgroupGenerator(const Integer &p, const Integer &g) =0;
 
+    /// \brief Set subgroup order
+    /// \param q the subgroup order
     void SetSubgroupOrder(const Integer &q)
         {m_q = q; ParametersChanged();}
+
+    static std::string CRYPTOPP_API StaticAlgorithmNamePrefix() {return "";}
 
 protected:
     Integer ComputeGroupOrder(const Integer &modulus) const
@@ -113,7 +175,6 @@ private:
     Integer m_q;
 };
 
-/// \class DL_GroupParameters_IntegerBasedImpl
 /// \brief Integer-based GroupParameters default implementation
 /// \tparam GROUP_PRECOMP group parameters precomputation specialization
 /// \tparam BASE_PRECOMP base class precomputation specialization
@@ -139,7 +200,12 @@ public:
     DL_FixedBasePrecomputation<Element> & AccessBasePrecomputation() {return this->m_gpc;}
 
     // IntegerGroupParameters
+    /// \brief Retrieve the modulus for the group
+    /// \returns the modulus for the group
     const Integer & GetModulus() const {return this->m_groupPrecomputation.GetModulus();}
+
+    /// \brief Retrieves a reference to the group generator
+    /// \returns const reference to the group generator
     const Integer & GetGenerator() const {return this->m_gpc.GetBase(this->GetGroupPrecomputation());}
 
     void SetModulusAndSubgroupGenerator(const Integer &p, const Integer &g)        // these have to be set together
@@ -154,18 +220,43 @@ public:
 
 CRYPTOPP_DLL_TEMPLATE_CLASS DL_GroupParameters_IntegerBasedImpl<ModExpPrecomputation>;
 
-/// \class DL_GroupParameters_GFP
 /// \brief GF(p) group parameters
 class CRYPTOPP_DLL DL_GroupParameters_GFP : public DL_GroupParameters_IntegerBasedImpl<ModExpPrecomputation>
 {
 public:
     virtual ~DL_GroupParameters_GFP() {}
 
-    // DL_GroupParameters
+    /// \brief Determines if an element is an identity
+    /// \param element element to check
+    /// \returns true if the element is an identity, false otherwise
+    /// \details The identity element or or neutral element is a special element
+    ///  in a group that leaves other elements unchanged when combined with it.
+    /// \details IsIdentity() must be implemented in a derived class.
     bool IsIdentity(const Integer &element) const {return element == Integer::One();}
+
+    /// \brief Exponentiates a base to multiple exponents
+    /// \param results an array of Elements
+    /// \param base the base to raise to the exponents
+    /// \param exponents an array of exponents
+    /// \param exponentsCount the number of exponents in the array
+    /// \details SimultaneousExponentiate() raises the base to each exponent in
+    ///  the exponents array and stores the result at the respective position in
+    ///  the results array.
+    /// \details SimultaneousExponentiate() must be implemented in a derived class.
+    /// \pre <tt>COUNTOF(results) == exponentsCount</tt>
+    /// \pre <tt>COUNTOF(exponents) == exponentsCount</tt>
     void SimultaneousExponentiate(Element *results, const Element &base, const Integer *exponents, unsigned int exponentsCount) const;
 
-    // NameValuePairs interface
+    /// \brief Get a named value
+    /// \param name the name of the object or value to retrieve
+    /// \param valueType reference to a variable that receives the value
+    /// \param pValue void pointer to a variable that receives the value
+    /// \returns true if the value was retrieved, false otherwise
+    /// \details GetVoidValue() retrieves the value of name if it exists.
+    /// \note GetVoidValue() is an internal function and should be implemented
+    ///   by derived classes. Users should use one of the other functions instead.
+    /// \sa GetValue(), GetValueWithDefault(), GetIntValue(), GetIntValueWithDefault(),
+    ///   GetRequiredParameter() and GetRequiredIntParameter()
     bool GetVoidValue(const char *name, const std::type_info &valueType, void *pValue) const
     {
         return GetValueHelper<DL_GroupParameters_IntegerBased>(this, name, valueType, pValue).Assignable();
@@ -179,7 +270,6 @@ protected:
     int GetFieldType() const {return 1;}
 };
 
-/// \class DL_GroupParameters_GFP
 /// \brief GF(p) group parameters that default to safe primes
 class CRYPTOPP_DLL DL_GroupParameters_GFP_DefaultSafePrime : public DL_GroupParameters_GFP
 {
@@ -192,7 +282,6 @@ protected:
     unsigned int GetDefaultSubgroupOrderSize(unsigned int modulusSize) const {return modulusSize-1;}
 };
 
-/// \class DL_Algorithm_GDSA
 /// \brief GDSA algorithm
 /// \tparam T FieldElement type or class
 template <class T>
@@ -226,7 +315,6 @@ public:
     }
 };
 
-/// \class DL_Algorithm_DSA_RFC6979
 /// \brief DSA signature algorithm based on RFC 6979
 /// \tparam T FieldElement type or class
 /// \tparam H HashTransformation derived class
@@ -332,16 +420,6 @@ public:
 
 protected:
 
-#if 0
-    // Determine bits without converting to an Integer
-    inline unsigned int BitCount(const byte* buffer, size_t size) const
-    {
-        unsigned int idx = 0;
-        while (idx < size && buffer[idx] == 0) { idx++; }
-        return (size-idx)*8 - (8-BitPrecision(buffer[idx]));
-    }
-#endif
-
     Integer bits2int(const SecByteBlock& bits, size_t qlen) const
     {
         Integer ret(bits, bits.size());
@@ -394,7 +472,6 @@ private:
     mutable HMAC<H> m_hmac;
 };
 
-/// \class DL_Algorithm_GDSA_ISO15946
 /// \brief German Digital Signature Algorithm
 /// \tparam T FieldElement type or class
 /// \details The Digital Signature Scheme ECGDSA does not define the algorithm over integers. Rather, the
@@ -441,7 +518,6 @@ CRYPTOPP_DLL_TEMPLATE_CLASS DL_Algorithm_DSA_RFC6979<Integer, SHA256>;
 CRYPTOPP_DLL_TEMPLATE_CLASS DL_Algorithm_DSA_RFC6979<Integer, SHA384>;
 CRYPTOPP_DLL_TEMPLATE_CLASS DL_Algorithm_DSA_RFC6979<Integer, SHA512>;
 
-/// \class DL_Algorithm_NR
 /// \brief NR algorithm
 /// \tparam T FieldElement type or class
 template <class T>
@@ -471,7 +547,6 @@ public:
     }
 };
 
-/// \class DL_PublicKey_GFP
 /// \brief Discrete Log (DL) public key in GF(p) groups
 /// \tparam GP GroupParameters derived class
 /// \details DSA public key format is defined in 7.3.3 of RFC 2459. The    private key format is defined in 12.9 of PKCS #11 v2.10.
@@ -509,7 +584,6 @@ public:
         {this->GetPublicElement().DEREncode(bt);}
 };
 
-/// \class DL_PrivateKey_GFP
 /// \brief Discrete Log (DL) private key in GF(p) groups
 /// \tparam GP GroupParameters derived class
 template <class GP>
@@ -574,7 +648,6 @@ public:
 template <class GP>
 DL_PrivateKey_GFP<GP>::~DL_PrivateKey_GFP() {}
 
-/// \class DL_SignatureKeys_GFP
 /// \brief Discrete Log (DL) signing/verification keys in GF(p) groups
 struct DL_SignatureKeys_GFP
 {
@@ -583,7 +656,6 @@ struct DL_SignatureKeys_GFP
     typedef DL_PrivateKey_GFP<GroupParameters> PrivateKey;
 };
 
-/// \class DL_CryptoKeys_GFP
 /// \brief Discrete Log (DL) encryption/decryption keys in GF(p) groups
 struct DL_CryptoKeys_GFP
 {
@@ -592,99 +664,6 @@ struct DL_CryptoKeys_GFP
     typedef DL_PrivateKey_GFP<GroupParameters> PrivateKey;
 };
 
-/// \class DL_PublicKey_GFP_OldFormat
-/// \brief Discrete Log (DL) public key in GF(p) groups
-/// \tparam BASE GroupParameters derived class
-/// \deprecated This implementation uses a non-standard Crypto++ key format. New implementations
-///   should use DL_PublicKey_GFP and DL_PrivateKey_GFP
-template <class BASE>
-class DL_PublicKey_GFP_OldFormat : public BASE
-{
-public:
-    virtual ~DL_PublicKey_GFP_OldFormat() {}
-
-    void BERDecode(BufferedTransformation &bt)
-    {
-        BERSequenceDecoder seq(bt);
-            Integer v1(seq);
-            Integer v2(seq);
-            Integer v3(seq);
-
-            if (seq.EndReached())
-            {
-                this->AccessGroupParameters().Initialize(v1, v1/2, v2);
-                this->SetPublicElement(v3);
-            }
-            else
-            {
-                Integer v4(seq);
-                this->AccessGroupParameters().Initialize(v1, v2, v3);
-                this->SetPublicElement(v4);
-            }
-
-        seq.MessageEnd();
-    }
-
-    void DEREncode(BufferedTransformation &bt) const
-    {
-        DERSequenceEncoder seq(bt);
-            this->GetGroupParameters().GetModulus().DEREncode(seq);
-            if (this->GetGroupParameters().GetCofactor() != 2)
-                this->GetGroupParameters().GetSubgroupOrder().DEREncode(seq);
-            this->GetGroupParameters().GetGenerator().DEREncode(seq);
-            this->GetPublicElement().DEREncode(seq);
-        seq.MessageEnd();
-    }
-};
-
-/// \class DL_PrivateKey_GFP_OldFormat
-/// \brief Discrete Log (DL) private key in GF(p) groups
-/// \tparam BASE GroupParameters derived class
-/// \deprecated This implementation uses a non-standard Crypto++ key format. New implementations
-///   should use DL_PublicKey_GFP and DL_PrivateKey_GFP
-template <class BASE>
-class DL_PrivateKey_GFP_OldFormat : public BASE
-{
-public:
-    virtual ~DL_PrivateKey_GFP_OldFormat() {}
-
-    void BERDecode(BufferedTransformation &bt)
-    {
-        BERSequenceDecoder seq(bt);
-            Integer v1(seq);
-            Integer v2(seq);
-            Integer v3(seq);
-            Integer v4(seq);
-
-            if (seq.EndReached())
-            {
-                this->AccessGroupParameters().Initialize(v1, v1/2, v2);
-                this->SetPrivateExponent(v4 % (v1/2));    // some old keys may have x >= q
-            }
-            else
-            {
-                Integer v5(seq);
-                this->AccessGroupParameters().Initialize(v1, v2, v3);
-                this->SetPrivateExponent(v5);
-            }
-
-        seq.MessageEnd();
-    }
-
-    void DEREncode(BufferedTransformation &bt) const
-    {
-        DERSequenceEncoder seq(bt);
-            this->GetGroupParameters().GetModulus().DEREncode(seq);
-            if (this->GetGroupParameters().GetCofactor() != 2)
-                this->GetGroupParameters().GetSubgroupOrder().DEREncode(seq);
-            this->GetGroupParameters().GetGenerator().DEREncode(seq);
-            this->GetGroupParameters().ExponentiateBase(this->GetPrivateExponent()).DEREncode(seq);
-            this->GetPrivateExponent().DEREncode(seq);
-        seq.MessageEnd();
-    }
-};
-
-/// \class GDSA
 /// \brief DSA signature scheme
 /// \tparam H HashTransformation derived class
 /// \sa <a href="http://www.weidai.com/scan-mirror/sig.html#DSA-1363">DSA-1363</a>
@@ -698,7 +677,6 @@ struct GDSA : public DL_SS<
 {
 };
 
-/// \class NR
 /// \brief NR signature scheme
 /// \tparam H HashTransformation derived class
 /// \sa <a href="http://www.weidai.com/scan-mirror/sig.html#NR">NR</a>
@@ -711,45 +689,101 @@ struct NR : public DL_SS<
 {
 };
 
-/// \class DL_GroupParameters_DSA
 /// \brief DSA group parameters
 /// \details These are GF(p) group parameters that are allowed by the DSA standard
 /// \sa DL_Keys_DSA
+/// \since Crypto++ 1.0
 class CRYPTOPP_DLL DL_GroupParameters_DSA : public DL_GroupParameters_GFP
 {
 public:
     virtual ~DL_GroupParameters_DSA() {}
 
-    /*! also checks that the lengths of p and q are allowed by the DSA standard */
+    /// \brief Check the group for errors
+    /// \param rng RandomNumberGenerator for objects which use randomized testing
+    /// \param level level of thoroughness
+    /// \returns true if the tests succeed, false otherwise
+    /// \details ValidateGroup() also checks that the lengths of p and q are allowed
+    ///  by the DSA standard.
+    /// \details There are four levels of thoroughness:
+    ///   <ul>
+    ///   <li>0 - using this object won't cause a crash or exception
+    ///   <li>1 - this object will probably function, and encrypt, sign, other operations correctly
+    ///   <li>2 - ensure this object will function correctly, and perform reasonable security checks
+    ///   <li>3 - perform reasonable security checks, and do checks that may take a long time
+    ///   </ul>
+    /// \details Level 0 does not require a RandomNumberGenerator. A NullRNG() can be used for level 0.
+    ///  Level 1 may not check for weak keys and such. Levels 2 and 3 are recommended.
     bool ValidateGroup(RandomNumberGenerator &rng, unsigned int level) const;
-    /*! parameters: (ModulusSize), or (Modulus, SubgroupOrder, SubgroupGenerator) */
-    /*! ModulusSize must be between DSA::MIN_PRIME_LENGTH and DSA::MAX_PRIME_LENGTH, and divisible by DSA::PRIME_LENGTH_MULTIPLE */
+
+    /// \brief Generate a random key or crypto parameters
+    /// \param rng a RandomNumberGenerator to produce keying material
+    /// \param alg additional initialization parameters
+    /// \details NameValuePairs can be ModulusSize alone; or Modulus, SubgroupOrder, and
+    ///  SubgroupGenerator. ModulusSize must be between <tt>DSA::MIN_PRIME_LENGTH</tt> and
+    ///  <tt>DSA::MAX_PRIME_LENGTH</tt>, and divisible by <tt>DSA::PRIME_LENGTH_MULTIPLE</tt>.
+    /// \details An example of changing the modulus size using NameValuePairs is shown below.
+    /// <pre>
+    ///   AlgorithmParameters params = MakeParameters
+    ///     (Name::ModulusSize(), 2048);
+    ///
+    ///   DL_GroupParameters_DSA groupParams;
+    ///   groupParams.GenerateRandom(prng, params);
+    /// </pre>
+    /// \throws KeyingErr if a key can't be generated or algorithm parameters are invalid.
     void GenerateRandom(RandomNumberGenerator &rng, const NameValuePairs &alg);
 
+    /// \brief Check the prime length for errors
+    /// \param pbits number of bits in the prime number
+    /// \returns true if the tests succeed, false otherwise
     static bool CRYPTOPP_API IsValidPrimeLength(unsigned int pbits)
         {return pbits >= MIN_PRIME_LENGTH && pbits <= MAX_PRIME_LENGTH && pbits % PRIME_LENGTH_MULTIPLE == 0;}
 
-    enum {MIN_PRIME_LENGTH = 1024, MAX_PRIME_LENGTH = 3072, PRIME_LENGTH_MULTIPLE = 1024};
+    /// \brief DSA prime length
+    enum {
+        /// \brief Minimum prime length
+        MIN_PRIME_LENGTH = 1024,
+        /// \brief Maximum prime length
+        MAX_PRIME_LENGTH = 3072,
+        /// \brief Prime length multiple
+        PRIME_LENGTH_MULTIPLE = 1024
+    };
 };
 
 template <class H>
 class DSA2;
 
-/// \class DL_Keys_DSA
 /// \brief DSA keys
 /// \sa DL_GroupParameters_DSA
+/// \since Crypto++ 1.0
 struct DL_Keys_DSA
 {
     typedef DL_PublicKey_GFP<DL_GroupParameters_DSA> PublicKey;
     typedef DL_PrivateKey_WithSignaturePairwiseConsistencyTest<DL_PrivateKey_GFP<DL_GroupParameters_DSA>, DSA2<SHA1> > PrivateKey;
 };
 
-/// \class DSA2
 /// \brief DSA signature scheme
 /// \tparam H HashTransformation derived class
-/// \details The class is named DSA2 instead of DSA for backwards compatibility because DSA was a non-template class.
-/// \sa <a href="http://en.wikipedia.org/wiki/Digital_Signature_Algorithm">DSA</a>, as specified in FIPS 186-3
-/// \since Crypto++ 1.0 for DSA, Crypto++ 5.6.2 for DSA2
+/// \details The class is named DSA2 instead of DSA for backwards compatibility because
+///   DSA was a non-template class.
+/// \details DSA default method GenerateRandom uses a 2048-bit modulus and a 224-bit subgoup by default.
+///   The modulus can be changed using the following code:
+/// <pre>
+///   DSA::PrivateKey privateKey;
+///   privateKey.GenerateRandomWithKeySize(prng, 2048);
+/// </pre>
+/// \details The subgroup order can be changed using the following code:
+/// <pre>
+///   AlgorithmParameters params = MakeParameters
+///     (Name::ModulusSize(), 2048)
+///     (Name::SubgroupOrderSize(), 256);
+///
+///   DSA::PrivateKey privateKey;
+///   privateKey.GenerateRandom(prng, params);
+/// </pre>
+/// \sa <a href="http://en.wikipedia.org/wiki/Digital_Signature_Algorithm">DSA</a>, as specified in FIPS 186-3,
+///   <a href="https://www.cryptopp.com/wiki/Digital_Signature_Algorithm">Digital Signature Algorithm</a> on the wiki, and
+///   <a href="https://www.cryptopp.com/wiki/NameValuePairs">NameValuePairs</a> on the wiki.
+/// \since Crypto++ 1.0 for DSA, Crypto++ 5.6.2 for DSA2, Crypto++ 6.1 for 2048-bit modulus.
 template <class H>
 class DSA2 : public DL_SS<
     DL_Keys_DSA,
@@ -762,7 +796,6 @@ public:
     static std::string CRYPTOPP_API StaticAlgorithmName() {return "DSA/" + (std::string)H::StaticAlgorithmName();}
 };
 
-/// \class DSA_RFC6979
 /// \brief DSA deterministic signature scheme
 /// \tparam H HashTransformation derived class
 /// \sa <a href="http://www.weidai.com/scan-mirror/sig.html#DSA-1363">DSA-1363</a>
@@ -785,7 +818,6 @@ CRYPTOPP_DLL_TEMPLATE_CLASS DL_PublicKey_GFP<DL_GroupParameters_DSA>;
 CRYPTOPP_DLL_TEMPLATE_CLASS DL_PrivateKey_GFP<DL_GroupParameters_DSA>;
 CRYPTOPP_DLL_TEMPLATE_CLASS DL_PrivateKey_WithSignaturePairwiseConsistencyTest<DL_PrivateKey_GFP<DL_GroupParameters_DSA>, DSA2<SHA1> >;
 
-/// \class DL_EncryptionAlgorithm_Xor
 /// \brief P1363 based XOR Encryption Method
 /// \tparam MAC MessageAuthenticationCode derived class used for MAC computation
 /// \tparam DHAES_MODE flag indicating DHAES mode
@@ -807,7 +839,7 @@ public:
 
     bool ParameterSupported(const char *name) const {return strcmp(name, Name::EncodingParameters()) == 0;}
     size_t GetSymmetricKeyLength(size_t plaintextLength) const
-        {return plaintextLength + static_cast<size_t>(MAC::DIGESTSIZE);}
+        {return plaintextLength + static_cast<size_t>(MAC::DEFAULT_KEYLENGTH);}
     size_t GetSymmetricCiphertextLength(size_t plaintextLength) const
         {return plaintextLength + static_cast<size_t>(MAC::DIGESTSIZE);}
     size_t GetMaxSymmetricPlaintextLength(size_t ciphertextLength) const
@@ -910,7 +942,6 @@ public:
     }
 };
 
-/// \class DLIES
 /// \brief Discrete Log Integrated Encryption Scheme
 /// \tparam COFACTOR_OPTION cofactor multiplication option
 /// \tparam HASH HashTransformation derived class used for key drivation and MAC computation

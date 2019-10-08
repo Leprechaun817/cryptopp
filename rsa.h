@@ -18,7 +18,6 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class RSAFunction
 /// \brief RSA trapdoor function using the public key
 /// \since Crypto++ 1.0
 class CRYPTOPP_DLL RSAFunction : public TrapdoorFunction, public X509PublicKey
@@ -58,7 +57,6 @@ protected:
 	Integer m_n, m_e;
 };
 
-/// \class InvertibleRSAFunction
 /// \brief RSA trapdoor function using the private key
 /// \since Crypto++ 1.0
 class CRYPTOPP_DLL InvertibleRSAFunction : public RSAFunction, public TrapdoorFunctionInverse, public PKCS8PrivateKey
@@ -139,7 +137,6 @@ protected:
 	Integer m_d, m_p, m_q, m_dp, m_dq, m_u;
 };
 
-/// \class RSAFunction_ISO
 /// \brief RSA trapdoor function using the public key
 /// \since Crypto++ 1.0
 class CRYPTOPP_DLL RSAFunction_ISO : public RSAFunction
@@ -149,7 +146,6 @@ public:
 	Integer PreimageBound() const {return ++(m_n>>1);}
 };
 
-/// \class InvertibleRSAFunction_ISO
 /// \brief RSA trapdoor function using the private key
 /// \since Crypto++ 1.0
 class CRYPTOPP_DLL InvertibleRSAFunction_ISO : public InvertibleRSAFunction
@@ -159,7 +155,6 @@ public:
 	Integer PreimageBound() const {return ++(m_n>>1);}
 };
 
-/// \class RSA
 /// \brief RSA algorithm
 /// \since Crypto++ 1.0
 struct CRYPTOPP_DLL RSA
@@ -169,7 +164,6 @@ struct CRYPTOPP_DLL RSA
 	typedef InvertibleRSAFunction PrivateKey;
 };
 
-/// \class RSAES
 /// \brief RSA encryption algorithm
 /// \tparam STANDARD signature standard
 /// \sa <a href="http://www.weidai.com/scan-mirror/ca.html#RSA">RSA cryptosystem</a>
@@ -179,7 +173,6 @@ struct RSAES : public TF_ES<RSA, STANDARD>
 {
 };
 
-/// \class RSASS
 /// \brief RSA signature algorithm
 /// \tparam STANDARD signature standard
 /// \tparam H hash transformation
@@ -191,7 +184,6 @@ struct RSASS : public TF_SS<RSA, STANDARD, H>
 {
 };
 
-/// \class RSA_ISO
 /// \brief RSA algorithm
 /// \since Crypto++ 1.0
 struct CRYPTOPP_DLL RSA_ISO
@@ -201,7 +193,6 @@ struct CRYPTOPP_DLL RSA_ISO
 	typedef InvertibleRSAFunction_ISO PrivateKey;
 };
 
-/// \class RSASS_ISO
 /// \brief RSA signature algorithm
 /// \tparam H hash transformation
 /// \since Crypto++ 1.0
@@ -212,17 +203,17 @@ struct RSASS_ISO : public TF_SS<RSA_ISO, P1363_EMSA2, H>
 
 /// \brief \ref RSAES<STANDARD> "RSAES<PKCS1v15>::Decryptor" typedef
 /// \details RSA encryption scheme defined in PKCS #1 v2.0
-DOCUMENTED_TYPEDEF(RSAES<PKCS1v15>::Decryptor, RSAES_PKCS1v15_Decryptor);
+DOCUMENTED_TYPEDEF(RSAES<PKCS1v15>::Decryptor, RSAES_PKCS1v15_Decryptor);
 /// \brief \ref RSAES<STANDARD> "RSAES<PKCS1v15>::Encryptor" typedef
 /// \details RSA encryption scheme defined in PKCS #1 v2.0
-DOCUMENTED_TYPEDEF(RSAES<PKCS1v15>::Encryptor, RSAES_PKCS1v15_Encryptor);
+DOCUMENTED_TYPEDEF(RSAES<PKCS1v15>::Encryptor, RSAES_PKCS1v15_Encryptor);
 
 /// \brief \ref RSAES<STANDARD> "RSAES<OAEP<SHA1>>::Decryptor" typedef
 /// \details RSA encryption scheme defined in PKCS #1 v2.0
-DOCUMENTED_TYPEDEF(RSAES<OAEP<SHA1> >::Decryptor, RSAES_OAEP_SHA_Decryptor);
+DOCUMENTED_TYPEDEF(RSAES<OAEP<SHA1> >::Decryptor, RSAES_OAEP_SHA_Decryptor);
 /// \brief \ref RSAES<STANDARD> "RSAES<OAEP<SHA1>>::Encryptor" typedef
 /// \details RSA encryption scheme defined in PKCS #1 v2.0
-DOCUMENTED_TYPEDEF(RSAES<OAEP<SHA1> >::Encryptor, RSAES_OAEP_SHA_Encryptor);
+DOCUMENTED_TYPEDEF(RSAES<OAEP<SHA1> >::Encryptor, RSAES_OAEP_SHA_Encryptor);
 
 #ifdef CRYPTOPP_DOXYGEN_PROCESSING
 /// \brief \ref RSASS<STANDARD,HASH> "RSASS<PKCS1v15,SHA1>::Signer" typedef

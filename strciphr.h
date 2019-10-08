@@ -5,25 +5,25 @@
 /// \details This file contains helper classes for implementing stream ciphers.
 ///   All this infrastructure may look very complex compared to what's in Crypto++ 4.x,
 ///   but stream ciphers implementations now support a lot of new functionality,
-///   including better performance (minimizing copying), resetting of keys and IVs, and methods to
-///   query which features are supported by a cipher.
-/// \details Here's an explanation of these classes. The word "policy" is used here to mean a class with a
-///   set of methods that must be implemented by individual stream cipher implementations.
-///   This is usually much simpler than the full stream cipher API, which is implemented by
-///   either AdditiveCipherTemplate or CFB_CipherTemplate using the policy. So for example, an
-///   implementation of SEAL only needs to implement the AdditiveCipherAbstractPolicy interface
-///   (since it's an additive cipher, i.e., it xors a keystream into the plaintext).
-///   See this line in seal.h:
+///   including better performance (minimizing copying), resetting of keys and IVs, and
+///   methods to query which features are supported by a cipher.
+/// \details Here's an explanation of these classes. The word "policy" is used here to
+///   mean a class with a set of methods that must be implemented by individual stream
+///   cipher implementations. This is usually much simpler than the full stream cipher
+///   API, which is implemented by either AdditiveCipherTemplate or CFB_CipherTemplate
+///   using the policy. So for example, an implementation of SEAL only needs to implement
+///   the AdditiveCipherAbstractPolicy interface (since it's an additive cipher, i.e., it
+///   xors a keystream into the plaintext). See this line in seal.h:
 /// <pre>
 ///     typedef SymmetricCipherFinal\<ConcretePolicyHolder\<SEAL_Policy\<B\>, AdditiveCipherTemplate\<\> \> \> Encryption;
 /// </pre>
-/// \details AdditiveCipherTemplate and CFB_CipherTemplate are designed so that they don't need
-///   to take a policy class as a template parameter (although this is allowed), so that
-///   their code is not duplicated for each new cipher. Instead they each
-///   get a reference to an abstract policy interface by calling AccessPolicy() on itself, so
+/// \details AdditiveCipherTemplate and CFB_CipherTemplate are designed so that they don't
+///   need to take a policy class as a template parameter (although this is allowed), so
+///   that their code is not duplicated for each new cipher. Instead they each get a
+///   reference to an abstract policy interface by calling AccessPolicy() on itself, so
 ///   AccessPolicy() must be overridden to return the actual policy reference. This is done
-///   by the ConceretePolicyHolder class. Finally, SymmetricCipherFinal implements the constructors and
-///   other functions that must be implemented by the most derived class.
+///   by the ConceretePolicyHolder class. Finally, SymmetricCipherFinal implements the
+///   constructors and other functions that must be implemented by the most derived class.
 
 #ifndef CRYPTOPP_STRCIPHR_H
 #define CRYPTOPP_STRCIPHR_H
@@ -42,7 +42,6 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class AbstractPolicyHolder
 /// \brief Access a stream cipher policy object
 /// \tparam POLICY_INTERFACE class implementing AbstractPolicyHolder
 /// \tparam BASE class or type to use as a base class
@@ -58,7 +57,6 @@ protected:
 	virtual POLICY_INTERFACE & AccessPolicy() =0;
 };
 
-/// \class ConcretePolicyHolder
 /// \brief Stream cipher policy object
 /// \tparam POLICY class implementing AbstractPolicyHolder
 /// \tparam BASE class or type to use as a base class
@@ -99,9 +97,9 @@ enum KeystreamOperation {
 	/// \brief XOR the input buffer and keystream, write to the aligned output buffer
 	XOR_KEYSTREAM_OUTPUT_ALIGNED= OUTPUT_ALIGNED,
 	/// \brief XOR the aligned input buffer and keystream, write to the aligned output buffer
-	XOR_KEYSTREAM_BOTH_ALIGNED	= OUTPUT_ALIGNED | INPUT_ALIGNED};
+	XOR_KEYSTREAM_BOTH_ALIGNED	= OUTPUT_ALIGNED | INPUT_ALIGNED
+};
 
-/// \class AdditiveCipherAbstractPolicy
 /// \brief Policy object for additive stream ciphers
 struct CRYPTOPP_DLL CRYPTOPP_NO_VTABLE AdditiveCipherAbstractPolicy
 {
@@ -133,7 +131,7 @@ struct CRYPTOPP_DLL CRYPTOPP_NO_VTABLE AdditiveCipherAbstractPolicy
 	/// \param iterationCount the number of iterations to generate the key stream
 	/// \sa CanOperateKeystream(), OperateKeystream(), WriteKeystream()
 	virtual void WriteKeystream(byte *keystream, size_t iterationCount)
-		{OperateKeystream(KeystreamOperation(INPUT_NULL | (KeystreamOperationFlags)IsAlignedOn(keystream, GetAlignment())), keystream, NULLPTR, iterationCount);}
+		{OperateKeystream(KeystreamOperation(INPUT_NULL | static_cast<KeystreamOperationFlags>(IsAlignedOn(keystream, GetAlignment()))), keystream, NULLPTR, iterationCount);}
 
 	/// \brief Flag indicating
 	/// \returns true if the stream can be generated independent of the transformation input, false otherwise
@@ -149,7 +147,8 @@ struct CRYPTOPP_DLL CRYPTOPP_NO_VTABLE AdditiveCipherAbstractPolicy
 	///   which will be derived from GetBytesPerIteration().
 	/// \sa CanOperateKeystream(), OperateKeystream(), WriteKeystream(), KeystreamOperation()
 	virtual void OperateKeystream(KeystreamOperation operation, byte *output, const byte *input, size_t iterationCount)
-		{CRYPTOPP_UNUSED(operation); CRYPTOPP_UNUSED(output); CRYPTOPP_UNUSED(input); CRYPTOPP_UNUSED(iterationCount); CRYPTOPP_ASSERT(false);}
+		{CRYPTOPP_UNUSED(operation); CRYPTOPP_UNUSED(output); CRYPTOPP_UNUSED(input);
+		CRYPTOPP_UNUSED(iterationCount); CRYPTOPP_ASSERT(false);}
 
 	/// \brief Key the cipher
 	/// \param params set of NameValuePairs use to initialize this object
@@ -162,7 +161,8 @@ struct CRYPTOPP_DLL CRYPTOPP_NO_VTABLE AdditiveCipherAbstractPolicy
 	/// \param iv a byte array used to resynchronize the cipher
 	/// \param length the size of the IV array
 	virtual void CipherResynchronize(byte *keystreamBuffer, const byte *iv, size_t length)
-		{CRYPTOPP_UNUSED(keystreamBuffer); CRYPTOPP_UNUSED(iv); CRYPTOPP_UNUSED(length); throw NotImplemented("SimpleKeyingInterface: this object doesn't support resynchronization");}
+		{CRYPTOPP_UNUSED(keystreamBuffer); CRYPTOPP_UNUSED(iv); CRYPTOPP_UNUSED(length);
+		throw NotImplemented("SimpleKeyingInterface: this object doesn't support resynchronization");}
 
 	/// \brief Flag indicating random access
 	/// \returns true if the cipher is seekable, false otherwise
@@ -172,10 +172,26 @@ struct CRYPTOPP_DLL CRYPTOPP_NO_VTABLE AdditiveCipherAbstractPolicy
 	/// \brief Seeks to a random position in the stream
 	/// \sa CipherIsRandomAccess()
 	virtual void SeekToIteration(lword iterationCount)
-		{CRYPTOPP_UNUSED(iterationCount); CRYPTOPP_ASSERT(!CipherIsRandomAccess()); throw NotImplemented("StreamTransformation: this object doesn't support random access");}
+		{CRYPTOPP_UNUSED(iterationCount); CRYPTOPP_ASSERT(!CipherIsRandomAccess());
+		throw NotImplemented("StreamTransformation: this object doesn't support random access");}
+
+	/// \brief Retrieve the provider of this algorithm
+	/// \return the algorithm provider
+	/// \details The algorithm provider can be a name like "C++", "SSE", "NEON", "AESNI",
+	///    "ARMv8" and "Power8". C++ is standard C++ code. Other labels, like SSE,
+	///    usually indicate a specialized implementation using instructions from a higher
+	///    instruction set architecture (ISA). Future labels may include external hardware
+	///    like a hardware security module (HSM).
+	/// \details Generally speaking Wei Dai's original IA-32 ASM code falls under "SSE2".
+	///    Labels like "SSSE3" and "SSE4.1" follow after Wei's code and use intrinsics
+	///    instead of ASM.
+	/// \details Algorithms which combine different instructions or ISAs provide the
+	///    dominant one. For example on x86 <tt>AES/GCM</tt> returns "AESNI" rather than
+	///    "CLMUL" or "AES+SSE4.1" or "AES+CLMUL" or "AES+SSE4.1+CLMUL".
+	/// \note Provider is not universally implemented yet.
+	virtual std::string AlgorithmProvider() const { return "C++"; }
 };
 
-/// \class AdditiveCipherConcretePolicy
 /// \brief Base class for additive stream ciphers
 /// \tparam WT word type
 /// \tparam W count of words
@@ -184,14 +200,24 @@ struct CRYPTOPP_DLL CRYPTOPP_NO_VTABLE AdditiveCipherAbstractPolicy
 template <typename WT, unsigned int W, unsigned int X = 1, class BASE = AdditiveCipherAbstractPolicy>
 struct CRYPTOPP_NO_VTABLE AdditiveCipherConcretePolicy : public BASE
 {
+	/// \brief Word type for the cipher
 	typedef WT WordType;
-	CRYPTOPP_CONSTANT(BYTES_PER_ITERATION = sizeof(WordType) * W)
+
+	/// \brief Number of bytes for an iteration
+	/// \details BYTES_PER_ITERATION is the product <tt>sizeof(WordType) * W</tt>.
+	///  For example, ChaCha uses 16 each <tt>word32</tt>, and the value of
+	///  BYTES_PER_ITERATION is 64. Each invocation of the ChaCha block function
+	///  produces 64 bytes of keystream.
+	CRYPTOPP_CONSTANT(BYTES_PER_ITERATION = sizeof(WordType) * W);
+
+	virtual ~AdditiveCipherConcretePolicy() {}
 
 #if !(CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X64)
 	/// \brief Provides data alignment requirements
 	/// \returns data alignment requirements, in bytes
-	/// \details Internally, the default implementation returns 1. If the stream cipher is implemented
-	///   using an SSE2 ASM or intrinsics, then the value returned is usually 16.
+	/// \details Internally, the default implementation returns 1. If the stream
+	///  cipher is implemented using an SSE2 ASM or intrinsics, then the value
+	///  returned is usually 16.
 	unsigned int GetAlignment() const {return GetAlignmentOf<WordType>();}
 #endif
 
@@ -205,7 +231,8 @@ struct CRYPTOPP_NO_VTABLE AdditiveCipherConcretePolicy : public BASE
 	unsigned int GetIterationsToBuffer() const {return X;}
 
 	/// \brief Flag indicating
-	/// \returns true if the stream can be generated independent of the transformation input, false otherwise
+	/// \returns true if the stream can be generated independent of the
+	///  transformation input, false otherwise
 	/// \sa CanOperateKeystream(), OperateKeystream(), WriteKeystream()
 	bool CanOperateKeystream() const {return true;}
 
@@ -221,10 +248,17 @@ struct CRYPTOPP_NO_VTABLE AdditiveCipherConcretePolicy : public BASE
 };
 
 /// \brief Helper macro to implement OperateKeystream
+/// \param x KeystreamOperation mask
+/// \param b Endian order
+/// \param i index in output buffer
+/// \param a value to output
 #define CRYPTOPP_KEYSTREAM_OUTPUT_WORD(x, b, i, a)	\
 	PutWord(bool(x & OUTPUT_ALIGNED), b, output+i*sizeof(WordType), (x & INPUT_NULL) ? (a) : (a) ^ GetWord<WordType>(bool(x & INPUT_ALIGNED), b, input+i*sizeof(WordType)));
 
 /// \brief Helper macro to implement OperateKeystream
+/// \param x KeystreamOperation mask
+/// \param i index in output buffer
+/// \param a value to output
 #define CRYPTOPP_KEYSTREAM_OUTPUT_XMM(x, i, a)	{\
 	__m128i t = (x & INPUT_NULL) ? a : _mm_xor_si128(a, (x & INPUT_ALIGNED) ? _mm_load_si128((__m128i *)input+i) : _mm_loadu_si128((__m128i *)input+i));\
 	if (x & OUTPUT_ALIGNED) _mm_store_si128((__m128i *)output+i, t);\
@@ -259,7 +293,6 @@ struct CRYPTOPP_NO_VTABLE AdditiveCipherConcretePolicy : public BASE
 	}											\
 	output += y;
 
-/// \class AdditiveCipherTemplate
 /// \brief Base class for additive stream ciphers with SymmetricCipher interface
 /// \tparam BASE AbstractPolicyHolder base class
 template <class BASE = AbstractPolicyHolder<AdditiveCipherAbstractPolicy, SymmetricCipher> >
@@ -267,12 +300,13 @@ class CRYPTOPP_NO_VTABLE AdditiveCipherTemplate : public BASE, public RandomNumb
 {
 public:
 	virtual ~AdditiveCipherTemplate() {}
+	AdditiveCipherTemplate() : m_leftOver(0) {}
 
 	/// \brief Generate random array of bytes
 	/// \param output the byte buffer
 	/// \param size the length of the buffer, in bytes
-	/// \details All generated values are uniformly distributed over the range specified within the
-	///   the constraints of a particular generator.
+	/// \details All generated values are uniformly distributed over the range specified
+	///   within the constraints of a particular generator.
 	void GenerateBlock(byte *output, size_t size);
 
 	/// \brief Apply keystream to data
@@ -330,6 +364,22 @@ public:
 	/// \sa IsRandomAccess()
 	void Seek(lword position);
 
+	/// \brief Retrieve the provider of this algorithm
+	/// \return the algorithm provider
+	/// \details The algorithm provider can be a name like "C++", "SSE", "NEON", "AESNI",
+	///    "ARMv8" and "Power8". C++ is standard C++ code. Other labels, like SSE,
+	///    usually indicate a specialized implementation using instructions from a higher
+	///    instruction set architecture (ISA). Future labels may include external hardware
+	///    like a hardware security module (HSM).
+	/// \details Generally speaking Wei Dai's original IA-32 ASM code falls under "SSE2".
+	///    Labels like "SSSE3" and "SSE4.1" follow after Wei's code and use intrinsics
+	///    instead of ASM.
+	/// \details Algorithms which combine different instructions or ISAs provide the
+	///    dominant one. For example on x86 <tt>AES/GCM</tt> returns "AESNI" rather than
+	///    "CLMUL" or "AES+SSE4.1" or "AES+CLMUL" or "AES+SSE4.1+CLMUL".
+	/// \note Provider is not universally implemented yet.
+	std::string AlgorithmProvider() const { return this->GetPolicy().AlgorithmProvider(); }
+
 	typedef typename BASE::PolicyInterface PolicyInterface;
 
 protected:
@@ -338,13 +388,12 @@ protected:
 	unsigned int GetBufferByteSize(const PolicyInterface &policy) const {return policy.GetBytesPerIteration() * policy.GetIterationsToBuffer();}
 
 	inline byte * KeystreamBufferBegin() {return this->m_buffer.data();}
-	inline byte * KeystreamBufferEnd() {return (this->m_buffer.data() + this->m_buffer.size());}
+	inline byte * KeystreamBufferEnd() {return (PtrAdd(this->m_buffer.data(), this->m_buffer.size()));}
 
-	SecByteBlock m_buffer;
+	AlignedSecByteBlock m_buffer;
 	size_t m_leftOver;
 };
 
-/// \class CFB_CipherAbstractPolicy
 /// \brief Policy object for feeback based stream ciphers
 class CRYPTOPP_DLL CRYPTOPP_NO_VTABLE CFB_CipherAbstractPolicy
 {
@@ -380,8 +429,9 @@ public:
 	/// \param iterationCount the number of iterations to perform on the input
 	/// \sa IsSelfInverting() and IsForwardTransformation()
 	virtual void Iterate(byte *output, const byte *input, CipherDir dir, size_t iterationCount)
-		{CRYPTOPP_UNUSED(output); CRYPTOPP_UNUSED(input); CRYPTOPP_UNUSED(dir); CRYPTOPP_UNUSED(iterationCount);
-		 CRYPTOPP_ASSERT(false); /*throw 0;*/ throw Exception(Exception::OTHER_ERROR, "SimpleKeyingInterface: unexpected error");}
+		{CRYPTOPP_UNUSED(output); CRYPTOPP_UNUSED(input); CRYPTOPP_UNUSED(dir);
+		CRYPTOPP_UNUSED(iterationCount); CRYPTOPP_ASSERT(false);
+		throw Exception(Exception::OTHER_ERROR, "SimpleKeyingInterface: unexpected error");}
 
 	/// \brief Key the cipher
 	/// \param params set of NameValuePairs use to initialize this object
@@ -393,10 +443,26 @@ public:
 	/// \param iv a byte array used to resynchronize the cipher
 	/// \param length the size of the IV array
 	virtual void CipherResynchronize(const byte *iv, size_t length)
-		{CRYPTOPP_UNUSED(iv); CRYPTOPP_UNUSED(length); throw NotImplemented("SimpleKeyingInterface: this object doesn't support resynchronization");}
+		{CRYPTOPP_UNUSED(iv); CRYPTOPP_UNUSED(length);
+		throw NotImplemented("SimpleKeyingInterface: this object doesn't support resynchronization");}
+
+	/// \brief Retrieve the provider of this algorithm
+	/// \return the algorithm provider
+	/// \details The algorithm provider can be a name like "C++", "SSE", "NEON", "AESNI",
+	///    "ARMv8" and "Power8". C++ is standard C++ code. Other labels, like SSE,
+	///    usually indicate a specialized implementation using instructions from a higher
+	///    instruction set architecture (ISA). Future labels may include external hardware
+	///    like a hardware security module (HSM).
+	/// \details Generally speaking Wei Dai's original IA-32 ASM code falls under "SSE2".
+	///    Labels like "SSSE3" and "SSE4.1" follow after Wei's code and use intrinsics
+	///    instead of ASM.
+	/// \details Algorithms which combine different instructions or ISAs provide the
+	///    dominant one. For example on x86 <tt>AES/GCM</tt> returns "AESNI" rather than
+	///    "CLMUL" or "AES+SSE4.1" or "AES+CLMUL" or "AES+SSE4.1+CLMUL".
+	/// \note Provider is not universally implemented yet.
+	virtual std::string AlgorithmProvider() const { return "C++"; }
 };
 
-/// \class CFB_CipherConcretePolicy
 /// \brief Base class for feedback based stream ciphers
 /// \tparam WT word type
 /// \tparam W count of words
@@ -405,6 +471,8 @@ template <typename WT, unsigned int W, class BASE = CFB_CipherAbstractPolicy>
 struct CRYPTOPP_NO_VTABLE CFB_CipherConcretePolicy : public BASE
 {
 	typedef WT WordType;
+
+	virtual ~CFB_CipherConcretePolicy() {}
 
 	/// \brief Provides data alignment requirements
 	/// \returns data alignment requirements, in bytes
@@ -440,8 +508,8 @@ struct CRYPTOPP_NO_VTABLE CFB_CipherConcretePolicy : public BASE
 		/// \returns reference to the next feedback register word
 		inline RegisterOutput& operator()(WordType &registerWord)
 		{
-			CRYPTOPP_ASSERT(IsAligned<WordType>(m_output));
-			CRYPTOPP_ASSERT(IsAligned<WordType>(m_input));
+			//CRYPTOPP_ASSERT(IsAligned<WordType>(m_output));
+			//CRYPTOPP_ASSERT(IsAligned<WordType>(m_input));
 
 			if (!NativeByteOrderIs(B::ToEnum()))
 				registerWord = ByteReverse(registerWord);
@@ -454,18 +522,26 @@ struct CRYPTOPP_NO_VTABLE CFB_CipherConcretePolicy : public BASE
 				}
 				else
 				{
-					WordType ct = *(const WordType *)m_input ^ registerWord;
+					// WordType ct = *(const WordType *)m_input ^ registerWord;
+					WordType ct = GetWord<WordType>(false, NativeByteOrder::ToEnum(), m_input) ^ registerWord;
 					registerWord = ct;
-					*(WordType*)m_output = ct;
+
+					// *(WordType*)m_output = ct;
+					PutWord<WordType>(false, NativeByteOrder::ToEnum(), m_output, ct);
+
 					m_input += sizeof(WordType);
 					m_output += sizeof(WordType);
 				}
 			}
 			else
 			{
-				WordType ct = *(const WordType *)m_input;
-				*(WordType*)m_output = registerWord ^ ct;
+				// WordType ct = *(const WordType *)m_input;
+				WordType ct = GetWord<WordType>(false, NativeByteOrder::ToEnum(), m_input);
+
+				// *(WordType*)m_output = registerWord ^ ct;
+				PutWord<WordType>(false, NativeByteOrder::ToEnum(), m_output, registerWord ^ ct);
 				registerWord = ct;
+
 				m_input += sizeof(WordType);
 				m_output += sizeof(WordType);
 			}
@@ -481,13 +557,15 @@ struct CRYPTOPP_NO_VTABLE CFB_CipherConcretePolicy : public BASE
 	};
 };
 
-/// \class CFB_CipherTemplate
 /// \brief Base class for feedback based stream ciphers with SymmetricCipher interface
 /// \tparam BASE AbstractPolicyHolder base class
 template <class BASE>
 class CRYPTOPP_NO_VTABLE CFB_CipherTemplate : public BASE
 {
 public:
+	virtual ~CFB_CipherTemplate() {}
+	CFB_CipherTemplate() : m_leftOver(0) {}
+
 	/// \brief Apply keystream to data
 	/// \param outString a buffer to write the transformed data
 	/// \param inString a buffer to read the data
@@ -534,6 +612,22 @@ public:
 	/// \returns true if the stream cipher is self inverting, false otherwise
 	bool IsSelfInverting() const {return false;}
 
+	/// \brief Retrieve the provider of this algorithm
+	/// \return the algorithm provider
+	/// \details The algorithm provider can be a name like "C++", "SSE", "NEON", "AESNI",
+	///    "ARMv8" and "Power8". C++ is standard C++ code. Other labels, like SSE,
+	///    usually indicate a specialized implementation using instructions from a higher
+	///    instruction set architecture (ISA). Future labels may include external hardware
+	///    like a hardware security module (HSM).
+	/// \details Generally speaking Wei Dai's original IA-32 ASM code falls under "SSE2".
+	///    Labels like "SSSE3" and "SSE4.1" follow after Wei's code and use intrinsics
+	///    instead of ASM.
+	/// \details Algorithms which combine different instructions or ISAs provide the
+	///    dominant one. For example on x86 <tt>AES/GCM</tt> returns "AESNI" rather than
+	///    "CLMUL" or "AES+SSE4.1" or "AES+CLMUL" or "AES+SSE4.1+CLMUL".
+	/// \note Provider is not universally implemented yet.
+	std::string AlgorithmProvider() const { return this->GetPolicy().AlgorithmProvider(); }
+
 	typedef typename BASE::PolicyInterface PolicyInterface;
 
 protected:
@@ -544,7 +638,6 @@ protected:
 	size_t m_leftOver;
 };
 
-/// \class CFB_EncryptionTemplate
 /// \brief Base class for feedback based stream ciphers in the forward direction with SymmetricCipher interface
 /// \tparam BASE AbstractPolicyHolder base class
 template <class BASE = AbstractPolicyHolder<CFB_CipherAbstractPolicy, SymmetricCipher> >
@@ -554,7 +647,6 @@ class CRYPTOPP_NO_VTABLE CFB_EncryptionTemplate : public CFB_CipherTemplate<BASE
 	void CombineMessageAndShiftRegister(byte *output, byte *reg, const byte *message, size_t length);
 };
 
-/// \class CFB_DecryptionTemplate
 /// \brief Base class for feedback based stream ciphers in the reverse direction with SymmetricCipher interface
 /// \tparam BASE AbstractPolicyHolder base class
 template <class BASE = AbstractPolicyHolder<CFB_CipherAbstractPolicy, SymmetricCipher> >
@@ -564,7 +656,6 @@ class CRYPTOPP_NO_VTABLE CFB_DecryptionTemplate : public CFB_CipherTemplate<BASE
 	void CombineMessageAndShiftRegister(byte *output, byte *reg, const byte *message, size_t length);
 };
 
-/// \class CFB_RequireFullDataBlocks
 /// \brief Base class for feedback based stream ciphers with a mandatory block size
 /// \tparam BASE CFB_EncryptionTemplate or CFB_DecryptionTemplate base class
 template <class BASE>
@@ -574,7 +665,6 @@ public:
 	unsigned int MandatoryBlockSize() const {return this->OptimalBlockSize();}
 };
 
-/// \class SymmetricCipherFinal
 /// \brief SymmetricCipher implementation
 /// \tparam BASE AbstractPolicyHolder derived base class
 /// \tparam INFO AbstractPolicyHolder derived information class

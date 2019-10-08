@@ -24,7 +24,6 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class Filter
 /// \brief Implementation of BufferedTransformation's attachment interface
 /// \details Filter is a cornerstone of the Pipeline trinitiy. Data flows from
 ///   Sources, through Filters, and then terminates in Sinks. The difference
@@ -155,7 +154,6 @@ protected:
 	int m_continueAt;
 };
 
-/// \class FilterPutSpaceHelper
 /// \brief Create a working space in a BufferedTransformation
 struct CRYPTOPP_DLL FilterPutSpaceHelper
 {
@@ -213,7 +211,6 @@ struct CRYPTOPP_DLL FilterPutSpaceHelper
 	SecByteBlock m_tempSpace;
 };
 
-/// \class MeterFilter
 /// \brief Measure how many bytes and messages pass through the filter
 /// \details measure how many bytes and messages pass through the filter. The filter also serves as valve by
 ///   maintaining a list of ranges to skip during processing.
@@ -285,7 +282,6 @@ private:
 	size_t m_length;
 };
 
-/// \class TransparentFilter
 /// \brief A transparent MeterFilter
 /// \sa MeterFilter, OpaqueFilter
 class CRYPTOPP_DLL TransparentFilter : public MeterFilter
@@ -296,7 +292,6 @@ public:
 	TransparentFilter(BufferedTransformation *attachment=NULLPTR) : MeterFilter(attachment, true) {}
 };
 
-/// \class OpaqueFilter
 /// \brief A non-transparent MeterFilter
 /// \sa MeterFilter, TransparentFilter
 class CRYPTOPP_DLL OpaqueFilter : public MeterFilter
@@ -307,7 +302,6 @@ public:
 	OpaqueFilter(BufferedTransformation *attachment=NULLPTR) : MeterFilter(attachment, false) {}
 };
 
-/// \class FilterWithBufferedInput
 /// \brief Divides an input stream into discrete blocks
 /// \details FilterWithBufferedInput divides the input stream into a first block, a number of
 ///   middle blocks, and a last block. First and last blocks are optional, and middle blocks may
@@ -425,7 +419,6 @@ protected:
 	BlockQueue m_queue;
 };
 
-/// \class FilterWithInputQueue
 /// \brief A filter that buffers input using a ByteQueue
 /// \details FilterWithInputQueue will buffer input using a ByteQueue. When the filter receives
 ///   a \ref BufferedTransformation::MessageEnd() "MessageEnd()" signal it will pass the data
@@ -481,7 +474,7 @@ struct BlockPaddingSchemeDef
 		/// \brief 0's padding added to a block
 		/// \since Crypto++ 5.0
 		ZEROS_PADDING,
-		/// \brief PKCS #5 padding added to a block
+		/// \brief PKCS padding added to a block
 		/// \since Crypto++ 5.0
 		PKCS_PADDING,
 		/// \brief 1 and 0's padding added to a block
@@ -498,7 +491,6 @@ struct BlockPaddingSchemeDef
 	};
 };
 
-/// \class StreamTransformationFilter
 /// \brief Filter wrapper for StreamTransformation
 /// \details StreamTransformationFilter() is a filter wrapper for StreamTransformation(). It is used when
 ///   pipelining data for stream ciphers and confidentiality-only block ciphers. The filter will optionally
@@ -553,7 +545,6 @@ protected:
 	bool m_isSpecial;
 };
 
-/// \class HashFilter
 /// \brief Filter wrapper for HashTransformation
 /// \since Crypto++ 1.0
 class CRYPTOPP_DLL HashFilter : public Bufferless<Filter>, private FilterPutSpaceHelper
@@ -583,7 +574,6 @@ private:
 	std::string m_messagePutChannel, m_hashPutChannel;
 };
 
-/// \class HashVerificationFilter
 /// \brief Filter wrapper for HashTransformation
 /// \since Crypto++ 4.0
 class CRYPTOPP_DLL HashVerificationFilter : public FilterWithBufferedInput
@@ -591,7 +581,6 @@ class CRYPTOPP_DLL HashVerificationFilter : public FilterWithBufferedInput
 public:
 	virtual ~HashVerificationFilter() {}
 
-	/// \class HashVerificationFailed
 	/// \brief Exception thrown when a data integrity check failure is encountered
 	class HashVerificationFailed : public Exception
 	{
@@ -647,7 +636,6 @@ private:
 	SecByteBlock m_expectedHash;
 };
 
-/// \class AuthenticatedEncryptionFilter
 /// \brief Filter wrapper for encrypting with AuthenticatedSymmetricCipher
 /// \details AuthenticatedEncryptionFilter() is a wrapper for encrypting with AuthenticatedSymmetricCipher(),
 ///   optionally handling padding/unpadding when needed.
@@ -689,7 +677,6 @@ protected:
 	HashFilter m_hf;
 };
 
-/// \class AuthenticatedDecryptionFilter
 /// \brief Filter wrapper for decrypting with AuthenticatedSymmetricCipher
 /// \details AuthenticatedDecryptionFilter() is a wrapper for decrypting with AuthenticatedSymmetricCipher(),
 ///   optionally handling padding/unpadding when needed.
@@ -751,7 +738,6 @@ protected:
 	StreamTransformationFilter m_streamFilter;
 };
 
-/// \class SignerFilter
 /// \brief Filter wrapper for PK_Signer
 /// \since Crypto++ 4.0
 class CRYPTOPP_DLL SignerFilter : public Unflushable<Filter>
@@ -780,7 +766,6 @@ private:
 	SecByteBlock m_buf;
 };
 
-/// \class SignatureVerificationFilter
 /// \brief Filter wrapper for PK_Verifier
 /// \details This filter was formerly named <tt>VerifierFilter</tt>. The name changed at Crypto++ 5.0.
 /// \since Crypto++ 4.0
@@ -843,7 +828,6 @@ private:
 	bool m_verified;
 };
 
-/// \class Redirector
 /// \brief Redirect input to another BufferedTransformation without owning it
 /// \since Crypto++ 4.0
 class CRYPTOPP_DLL Redirector : public CustomSignalPropagation<Sink>
@@ -881,12 +865,12 @@ public:
 	/// \brief Stop redirecting input
 	void StopRedirection() {m_target = NULLPTR;}
 
-	Behavior GetBehavior() {return (Behavior) m_behavior;}
+	Behavior GetBehavior() {return static_cast<Behavior>(m_behavior);}
 	void SetBehavior(Behavior behavior) {m_behavior=behavior;}
 	bool GetPassSignals() const {return (m_behavior & PASS_SIGNALS) != 0;}
-	void SetPassSignals(bool pass) { if (pass) m_behavior |= PASS_SIGNALS; else m_behavior &= ~(word32) PASS_SIGNALS; }
+	void SetPassSignals(bool pass) { if (pass) m_behavior |= PASS_SIGNALS; else m_behavior &= ~static_cast<word32>(PASS_SIGNALS); }
 	bool GetPassWaitObjects() const {return (m_behavior & PASS_WAIT_OBJECTS) != 0;}
-	void SetPassWaitObjects(bool pass) { if (pass) m_behavior |= PASS_WAIT_OBJECTS; else m_behavior &= ~(word32) PASS_WAIT_OBJECTS; }
+	void SetPassWaitObjects(bool pass) { if (pass) m_behavior |= PASS_WAIT_OBJECTS; else m_behavior &= ~static_cast<word32>(PASS_WAIT_OBJECTS); }
 
 	bool CanModifyInput() const
 		{return m_target ? m_target->CanModifyInput() : false;}
@@ -938,7 +922,6 @@ private:
 	word32 m_behavior;
 };
 
-/// \class OutputProxy
 /// \brief Filter class that is a proxy for a sink
 /// \details Used By ProxyFilter
 /// \since Crypto++ 4.0
@@ -988,7 +971,6 @@ private:
 	bool m_passSignal;
 };
 
-/// \class ProxyFilter
 /// \brief Base class for Filter classes that are proxies for a chain of other filters
 /// \since Crypto++ 4.0
 class CRYPTOPP_DLL ProxyFilter : public FilterWithBufferedInput
@@ -1015,7 +997,6 @@ protected:
 	member_ptr<BufferedTransformation> m_filter;
 };
 
-/// \class SimpleProxyFilter
 /// \brief Proxy filter that doesn't modify the underlying filter's input or output
 /// \since Crypto++ 5.0
 class CRYPTOPP_DLL SimpleProxyFilter : public ProxyFilter
@@ -1044,7 +1025,6 @@ public:
 		{CRYPTOPP_UNUSED(inString), CRYPTOPP_UNUSED(length); m_filter->MessageEnd();}
 };
 
-/// \class PK_EncryptorFilter
 /// \brief Filter wrapper for PK_Encryptor
 /// \details PK_DecryptorFilter is a proxy for the filter created by PK_Encryptor::CreateEncryptionFilter.
 ///   This class provides symmetry with VerifierFilter.
@@ -1060,7 +1040,6 @@ public:
 		: SimpleProxyFilter(encryptor.CreateEncryptionFilter(rng), attachment) {}
 };
 
-/// \class PK_DecryptorFilter
 /// \brief Filter wrapper for PK_Decryptor
 /// \details PK_DecryptorFilter is a proxy for the filter created by PK_Decryptor::CreateDecryptionFilter.
 ///   This class provides symmetry with SignerFilter.
@@ -1076,7 +1055,6 @@ public:
 		: SimpleProxyFilter(decryptor.CreateDecryptionFilter(rng), attachment) {}
 };
 
-/// \class StringSinkTemplate
 /// \brief Append input to a string object
 /// \tparam T std::basic_string<char> type
 /// \details StringSinkTemplate is a StringSinkTemplate typedef
@@ -1085,12 +1063,13 @@ template <class T>
 class StringSinkTemplate : public Bufferless<Sink>
 {
 public:
+	typedef typename T::value_type value_type;
 	virtual ~StringSinkTemplate() {}
 
 	/// \brief Construct a StringSinkTemplate
-	/// \param output std::basic_string<char> type
+	/// \param output std::basic_string<char> or std::vector<byte> type
 	StringSinkTemplate(T &output)
-		: m_output(&output) {CRYPTOPP_ASSERT(sizeof(output[0])==1);}
+		: m_output(&output) {CRYPTOPP_ASSERT(sizeof(value_type)==1);}
 
 	void IsolatedInitialize(const NameValuePairs &parameters)
 		{if (!parameters.GetValue("OutputStringPointer", m_output)) throw InvalidArgument("StringSink: OutputStringPointer not specified");}
@@ -1098,14 +1077,12 @@ public:
 	size_t Put2(const byte *inString, size_t length, int messageEnd, bool blocking)
 	{
 		CRYPTOPP_UNUSED(messageEnd); CRYPTOPP_UNUSED(blocking);
-		typedef typename T::traits_type::char_type char_type;
-
 		if (length > 0)
 		{
 			typename T::size_type size = m_output->size();
 			if (length < size && size + length > m_output->capacity())
 				m_output->reserve(2*size);
-			m_output->append((const char_type *)inString, (const char_type *)inString+length);
+			m_output->insert(m_output->end(), (const value_type *)inString, (const value_type *)inString+length);
 		}
 		return 0;
 	}
@@ -1114,15 +1091,19 @@ private:
 	T *m_output;
 };
 
-/// \class StringSink
 /// \brief Append input to a string object
 /// \details StringSink is a typedef for StringSinkTemplate<std::string>.
 /// \sa ArraySink, ArrayXorSink
 /// \since Crypto++ 4.0
-DOCUMENTED_TYPEDEF(StringSinkTemplate<std::string>, StringSink)
+DOCUMENTED_TYPEDEF(StringSinkTemplate<std::string>, StringSink);
 CRYPTOPP_DLL_TEMPLATE_CLASS StringSinkTemplate<std::string>;
 
-/// \class RandomNumberSink
+/// \brief Append input to a std::vector<byte> object
+/// \details VectorSink is a typedef for StringSinkTemplate<std::vector<byte> >.
+/// \since Crypto++ 8.0
+DOCUMENTED_TYPEDEF(StringSinkTemplate<std::vector<byte> >, VectorSink);
+CRYPTOPP_DLL_TEMPLATE_CLASS StringSinkTemplate<std::vector<byte> >;
+
 /// \brief Incorporates input into RNG as additional entropy
 /// \since Crypto++ 4.0
 class RandomNumberSink : public Bufferless<Sink>
@@ -1146,7 +1127,6 @@ private:
 	RandomNumberGenerator *m_rng;
 };
 
-/// \class ArraySink
 /// \brief Copy input to a memory buffer
 /// \details ArraySink wraps a fixed size buffer. The buffer is full once Put returns non-0.
 ///   When used in a pipleline, ArraySink silently discards input if the buffer is full.
@@ -1189,7 +1169,6 @@ protected:
 	lword m_total;
 };
 
-/// \class ArrayXorSink
 /// \brief Xor input to a memory buffer
 /// \details ArrayXorSink wraps a fixed size buffer. The buffer is full once Put returns non-0.
 ///   When used in a pipleline, ArrayXorSink silently discards input if the buffer is full.
@@ -1212,7 +1191,6 @@ public:
 	byte * CreatePutSpace(size_t &size) {return BufferedTransformation::CreatePutSpace(size);}
 };
 
-/// \class StringStore
 /// \brief String-based implementation of Store interface
 /// \since Crypto++ 4.0
 class StringStore : public Store
@@ -1245,7 +1223,6 @@ private:
 	size_t m_length, m_count;
 };
 
-/// \class RandomNumberStore
 /// \brief RNG-based implementation of Source interface
 /// \since Crypto++ 4.0
 class CRYPTOPP_DLL RandomNumberStore : public Store
@@ -1292,7 +1269,6 @@ private:
 	lword m_size;
 };
 
-/// \class Source
 /// \brief Implementation of BufferedTransformation's attachment interface
 /// \details Source is a cornerstone of the Pipeline trinitiy. Data flows from
 ///   Sources, through Filters, and then terminates in Sinks. The difference
@@ -1317,37 +1293,44 @@ public:
 	//@{
 
 	/// \brief Pump data to attached transformation
-	/// \param pumpMax the maximpum number of bytes to pump
+	/// \param pumpMax the maximum number of bytes to pump
 	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
 	/// \details Internally, Pump() calls Pump2().
-	/// \note pumpMax is a \p lword, which is a 64-bit value that typically uses \p LWORD_MAX. The default
-	///   argument is a \p size_t that uses \p SIZE_MAX, and it can be 32-bits or 64-bits.
-	lword Pump(lword pumpMax=(size_t)SIZE_MAX)
+	/// \note pumpMax is a <tt>lword</tt>, which is a 64-bit value that typically uses
+	///   <tt>LWORD_MAX</tt>. The default argument is <tt>SIZE_MAX</tt>, and it can be
+	///   32-bits or 64-bits.
+	/// \sa Pump2, PumpAll, AnyRetrievable, MaxRetrievable
+	lword Pump(lword pumpMax=SIZE_MAX)
 		{Pump2(pumpMax); return pumpMax;}
 
 	/// \brief Pump messages to attached transformation
-	/// \param count the maximpum number of messages to pump
+	/// \param count the maximum number of messages to pump
 	/// \returns TODO
 	/// \details Internally, PumpMessages() calls PumpMessages2().
 	unsigned int PumpMessages(unsigned int count=UINT_MAX)
 		{PumpMessages2(count); return count;}
 
 	/// \brief Pump all data to attached transformation
-	/// \details Internally, PumpAll() calls PumpAll2().
+	/// \details Pumps all data to the attached transformation and signal the end of the current
+	///   message. To avoid the MessageEnd() signal call \ref Pump "Pump(LWORD_MAX)" or \ref Pump2
+	///   "Pump2(LWORD_MAX, bool)".
+	/// \details Internally, PumpAll() calls PumpAll2(), which calls PumpMessages().
+	/// \sa Pump, Pump2, AnyRetrievable, MaxRetrievable
 	void PumpAll()
 		{PumpAll2();}
 
 	/// \brief Pump data to attached transformation
-	/// \param byteCount the maximpum number of bytes to pump
+	/// \param byteCount the maximum number of bytes to pump
 	/// \param blocking specifies whether the object should block when processing input
 	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
 	/// \details byteCount is an \a IN and \a OUT parameter. When the call is made, byteCount is the
 	///   requested size of the pump. When the call returns, byteCount is the number of bytes that
 	///   were pumped.
+	/// \sa Pump, PumpAll, AnyRetrievable, MaxRetrievable
 	virtual size_t Pump2(lword &byteCount, bool blocking=true) =0;
 
 	/// \brief Pump messages to attached transformation
-	/// \param messageCount the maximpum number of messages to pump
+	/// \param messageCount the maximum number of messages to pump
 	/// \param blocking specifies whether the object should block when processing input
 	/// \details messageCount is an IN and OUT parameter.
 	virtual size_t PumpMessages2(unsigned int &messageCount, bool blocking=true) =0;
@@ -1355,6 +1338,7 @@ public:
 	/// \brief Pump all data to attached transformation
 	/// \param blocking specifies whether the object should block when processing input
 	/// \returns the number of bytes that remain in the block (i.e., bytes not processed)
+	/// \sa Pump, Pump2, AnyRetrievable, MaxRetrievable
 	virtual size_t PumpAll2(bool blocking=true);
 
 	/// \brief Determines if the Source is exhausted
@@ -1372,7 +1356,6 @@ protected:
 	}
 };
 
-/// \class SourceTemplate
 /// \brief Transform a Store into a Source
 /// \tparam T the class or type
 /// \since Crypto++ 5.0
@@ -1405,7 +1388,6 @@ protected:
 	T m_store;
 };
 
-/// \class SourceTemplate
 /// \brief String-based implementation of the Source interface
 /// \since Crypto++ 4.0
 class CRYPTOPP_DLL StringSource : public SourceTemplate<StringStore>
@@ -1439,12 +1421,29 @@ public:
 		: SourceTemplate<StringStore>(attachment) {SourceInitialize(pumpAll, MakeParameters("InputBuffer", ConstByteArrayParameter(string)));}
 };
 
-/// \class ArraySource
 /// \brief Pointer-based implementation of the Source interface
 /// \details ArraySource is a typedef for StringSource. Use the third constructor for an array source.
 ///   The third constructor takes a pointer and length.
 /// \since Crypto++ 5.6.0
-DOCUMENTED_TYPEDEF(StringSource, ArraySource)
+DOCUMENTED_TYPEDEF(StringSource, ArraySource);
+
+/// \brief std::vector-based implementation of the Source interface
+/// \since Crypto++ 8.0
+class CRYPTOPP_DLL VectorSource : public SourceTemplate<StringStore>
+{
+public:
+	/// \brief Construct a VectorSource
+	/// \param attachment an optional attached transformation
+	VectorSource(BufferedTransformation *attachment = NULLPTR)
+		: SourceTemplate<StringStore>(attachment) {}
+
+	/// \brief Construct a VectorSource
+	/// \param vec vector of bytes
+	/// \param pumpAll flag indicating if source data should be pumped to its attached transformation
+	/// \param attachment an optional attached transformation
+	VectorSource(const std::vector<byte> &vec, bool pumpAll, BufferedTransformation *attachment = NULLPTR)
+		: SourceTemplate<StringStore>(attachment) {SourceInitialize(pumpAll, MakeParameters("InputBuffer", ConstByteArrayParameter(vec)));}
+};
 
 /// \brief RNG-based implementation of Source interface
 /// \since Crypto++ 4.0

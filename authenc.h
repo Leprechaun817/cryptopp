@@ -25,7 +25,6 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class AuthenticatedSymmetricCipherBase
 /// \brief Base class for authenticated encryption modes of operation
 /// \details AuthenticatedSymmetricCipherBase() serves as a base implementation for one direction
 ///   (encryption or decryption) of a stream cipher or block cipher mode with authentication.
@@ -61,7 +60,7 @@ protected:
 
 	void AuthenticateData(const byte *data, size_t len);
 	const SymmetricCipher & GetSymmetricCipher() const
-		{return const_cast<AuthenticatedSymmetricCipherBase *>(this)->AccessSymmetricCipher();};
+		{return const_cast<AuthenticatedSymmetricCipherBase *>(this)->AccessSymmetricCipher();}
 
 	virtual SymmetricCipher & AccessSymmetricCipher() =0;
 	virtual bool AuthenticationIsOnPlaintext() const =0;

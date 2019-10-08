@@ -1,7 +1,6 @@
 // dmac.h - originally written and placed in the public domain by Wei Dai
 
-/// \file
-/// \headerfile dmac.h
+/// \file dmac.h
 /// \brief Classes for DMAC message authentication code
 
 #ifndef CRYPTOPP_DMAC_H
@@ -11,23 +10,25 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-/// \class DMAC_Base
 /// \brief DMAC message authentication code base class
 /// \tparam T class derived from BlockCipherDocumentation
+/// \since Crypto++ 3.1
 template <class T>
 class CRYPTOPP_NO_VTABLE DMAC_Base : public SameKeyLengthAs<T>, public MessageAuthenticationCode
 {
 public:
+	CRYPTOPP_CONSTANT(DIGESTSIZE=T::BLOCKSIZE);
 	static std::string StaticAlgorithmName() {return std::string("DMAC(") + T::StaticAlgorithmName() + ")";}
 
-	CRYPTOPP_CONSTANT(DIGESTSIZE=T::BLOCKSIZE)
-
+	virtual~DMAC_Base() {}
 	DMAC_Base() : m_subkeylength(0), m_counter(0) {}
 
 	void UncheckedSetKey(const byte *key, unsigned int length, const NameValuePairs &params);
 	void Update(const byte *input, size_t length);
 	void TruncatedFinal(byte *mac, size_t size);
 	unsigned int DigestSize() const {return DIGESTSIZE;}
+
+	std::string AlgorithmProvider() const;
 
 private:
 	byte *GenerateSubKeys(const byte *key, size_t keylength);
@@ -39,11 +40,17 @@ private:
 	unsigned int m_counter;
 };
 
-/// \class DMAC
+template <class T>
+std::string DMAC_Base<T>::AlgorithmProvider() const
+{
+	return m_f2.AlgorithmProvider();
+}
+
 /// \brief DMAC message authentication code
 /// \tparam T class derived from BlockCipherDocumentation
 /// \sa <A HREF="https://eprint.iacr.org/1997/010">CBC MAC for Real-Time Data Sources (08.15.1997)</A>
 ///   by Erez Petrank and Charles Rackoff
+/// \since Crypto++ 3.1
 template <class T>
 class DMAC : public MessageAuthenticationCodeFinal<DMAC_Base<T> >
 {

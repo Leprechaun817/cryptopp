@@ -6,7 +6,11 @@
 #ifndef CRYPTOPP_MISC_H
 #define CRYPTOPP_MISC_H
 
-#include "config.h"
+#include "cryptlib.h"
+#include "secblockfwd.h"
+#include "smartptr.h"
+#include "stdcpp.h"
+#include "trap.h"
 
 #if !defined(CRYPTOPP_DOXYGEN_PROCESSING)
 
@@ -18,16 +22,13 @@
 # endif
 #endif
 
-// Issue 340
+// Issue 340 and Issue 793
 #if CRYPTOPP_GCC_DIAGNOSTIC_AVAILABLE
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wconversion"
 # pragma GCC diagnostic ignored "-Wsign-conversion"
+# pragma GCC diagnostic ignored "-Wunused-function"
 #endif
-
-#include "cryptlib.h"
-#include "stdcpp.h"
-#include "smartptr.h"
 
 #ifdef _MSC_VER
 	#if _MSC_VER >= 1400
@@ -61,36 +62,66 @@
 #include <stdlib.h>
 #endif
 
-#if defined(__GNUC__) && defined(__linux__)
-#define CRYPTOPP_BYTESWAP_AVAILABLE
+#if (defined(__GNUC__) || defined(__clang__)) && defined(__linux__)
+#define CRYPTOPP_BYTESWAP_AVAILABLE 1
 #include <byteswap.h>
+#endif
+
+// Limit to ARM A-32. Aarch64 is failing self tests.
+#if defined(__arm__) && (defined(__GNUC__) || defined(__clang__)) && (__ARM_ARCH >= 6)
+#define CRYPTOPP_ARM_BYTEREV_AVAILABLE 1
+#endif
+
+// Limit to ARM A-32. Aarch64 is failing self tests.
+#if defined(__arm__) && (defined(__GNUC__) || defined(__clang__)) && (__ARM_ARCH >= 7)
+#define CRYPTOPP_ARM_BITREV_AVAILABLE 1
 #endif
 
 #if defined(__BMI__)
 # include <x86intrin.h>
+# include <immintrin.h>
 #endif  // GCC and BMI
+
+// More LLVM bullshit. Apple Clang 6.0 does not define them.
+// Later version of Clang defines them and results in warnings.
+#if defined(__clang__)
+# ifndef _blsr_u32
+#  define _blsr_u32 __blsr_u32
+# endif
+# ifndef _blsr_u64
+#  define _blsr_u64 __blsr_u64
+# endif
+# ifndef _tzcnt_u32
+#  define _tzcnt_u32 __tzcnt_u32
+# endif
+# ifndef _tzcnt_u64
+#  define _tzcnt_u64 __tzcnt_u64
+# endif
+#endif
 
 #endif  // CRYPTOPP_DOXYGEN_PROCESSING
 
 #if CRYPTOPP_DOXYGEN_PROCESSING
 /// \brief The maximum value of a machine word
-/// \details SIZE_MAX provides the maximum value of a machine word. The value is
-///   0xffffffff on 32-bit machines, and 0xffffffffffffffff on 64-bit machines.
-/// Internally, SIZE_MAX is defined as __SIZE_MAX__ if __SIZE_MAX__ is defined. If not
-///   defined, then SIZE_T_MAX is tried. If neither __SIZE_MAX__ nor SIZE_T_MAX is
-///   is defined, the library uses std::numeric_limits<size_t>::max(). The library
-///   prefers __SIZE_MAX__ because its a constexpr that is optimized well
-///   by all compilers. std::numeric_limits<size_t>::max() is not a constexpr,
-///   and it is not always optimized well.
+/// \details <tt>SIZE_MAX</tt> provides the maximum value of a machine word. The value
+///  is <tt>0xffffffff</tt> on 32-bit targets, and <tt>0xffffffffffffffff</tt> on 64-bit
+///  targets.
+/// \details If <tt>SIZE_MAX</tt> is not defined, then <tt>__SIZE_MAX__</tt> is used if
+///  defined. If not defined, then <tt>SIZE_T_MAX</tt> is used if defined. If not defined,
+///  then the library uses <tt>std::numeric_limits<size_t>::max()</tt>.
+/// \details The library prefers <tt>__SIZE_MAX__</tt> or <tt>__SIZE_T_MAX__</tt> because
+///  they are effectively <tt>constexpr</tt> that is optimized well by all compilers.
+///  <tt>std::numeric_limits<size_t>::max()</tt> is not always a <tt>constexpr</tt>, and
+///  it is not always optimized well.
 #  define SIZE_MAX ...
 #else
 // Its amazing portability problems still plague this simple concept in 2015.
-//   http://stackoverflow.com/questions/30472731/which-c-standard-header-defines-size-max
+// http://stackoverflow.com/questions/30472731/which-c-standard-header-defines-size-max
 // Avoid NOMINMAX macro on Windows. http://support.microsoft.com/en-us/kb/143208
 #ifndef SIZE_MAX
-# if defined(__SIZE_MAX__) && (__SIZE_MAX__ > 0)
+# if defined(__SIZE_MAX__)
 #  define SIZE_MAX __SIZE_MAX__
-# elif defined(SIZE_T_MAX) && (SIZE_T_MAX > 0)
+# elif defined(SIZE_T_MAX)
 #  define SIZE_MAX SIZE_T_MAX
 # elif defined(__SIZE_TYPE__)
 #  define SIZE_MAX (~(__SIZE_TYPE__)0)
@@ -100,35 +131,6 @@
 #endif
 
 #endif // CRYPTOPP_DOXYGEN_PROCESSING
-
-// NumericLimitsMin and NumericLimitsMax added for word128 types,
-//   see http://github.com/weidai11/cryptopp/issues/364
-ANONYMOUS_NAMESPACE_BEGIN
-template<class T>
-T NumericLimitsMin()
-{
-	CRYPTOPP_ASSERT(std::numeric_limits<T>::is_specialized);
-	return (std::numeric_limits<T>::min)();
-};
-template<class T>
-T NumericLimitsMax()
-{
-	CRYPTOPP_ASSERT(std::numeric_limits<T>::is_specialized);
-	return (std::numeric_limits<T>::max)();
-};
-#if defined(CRYPTOPP_WORD128_AVAILABLE)
-template<>
-CryptoPP::word128 NumericLimitsMin()
-{
-	return 0;
-}
-template<>
-CryptoPP::word128 NumericLimitsMax()
-{
-	return (((CryptoPP::word128)W64LIT(0xffffffffffffffff)) << 64U) | (CryptoPP::word128)W64LIT(0xffffffffffffffff);
-}
-#endif
-ANONYMOUS_NAMESPACE_END
 
 NAMESPACE_BEGIN(CryptoPP)
 
@@ -140,8 +142,13 @@ class Integer;
 #if CRYPTOPP_DOXYGEN_PROCESSING
 /// \brief Compile time assertion
 /// \param expr the expression to evaluate
-/// \details Asserts the expression expr though a dummy struct.
-#define CRYPTOPP_COMPILE_ASSERT(expr) { ... }
+/// \details Asserts the expression <tt>expr</tt> during compile. If C++14 and
+///  N3928 are available, then C++14 <tt>static_assert</tt> is used. Otherwise,
+///  a <tt>CompileAssert</tt> structure is used. When the structure is used
+///  a negative-sized array triggers the assert at compile time.
+# define CRYPTOPP_COMPILE_ASSERT(expr) { ... }
+#elif defined(CRYPTOPP_CXX14_STATIC_ASSERT)
+# define CRYPTOPP_COMPILE_ASSERT(expr) static_assert(expr)
 #else // CRYPTOPP_DOXYGEN_PROCESSING
 template <bool b>
 struct CompileAssert
@@ -150,21 +157,22 @@ struct CompileAssert
 };
 
 #define CRYPTOPP_COMPILE_ASSERT(assertion) CRYPTOPP_COMPILE_ASSERT_INSTANCE(assertion, __LINE__)
-#if defined(CRYPTOPP_EXPORTS) || defined(CRYPTOPP_IMPORTS)
-#define CRYPTOPP_COMPILE_ASSERT_INSTANCE(assertion, instance)
-#else
-# if defined(__GNUC__)
-#  define CRYPTOPP_COMPILE_ASSERT_INSTANCE(assertion, instance) \
-		static CompileAssert<(assertion)> \
-		CRYPTOPP_ASSERT_JOIN(cryptopp_CRYPTOPP_ASSERT_, instance) __attribute__ ((unused))
-# else
-#  define CRYPTOPP_COMPILE_ASSERT_INSTANCE(assertion, instance) \
-		static CompileAssert<(assertion)> \
-		CRYPTOPP_ASSERT_JOIN(cryptopp_CRYPTOPP_ASSERT_, instance)
-# endif // __GNUC__
-#endif
 #define CRYPTOPP_ASSERT_JOIN(X, Y) CRYPTOPP_DO_ASSERT_JOIN(X, Y)
 #define CRYPTOPP_DO_ASSERT_JOIN(X, Y) X##Y
+
+#if defined(CRYPTOPP_EXPORTS) || defined(CRYPTOPP_IMPORTS)
+# define CRYPTOPP_COMPILE_ASSERT_INSTANCE(assertion, instance)
+#else
+# if defined(__GNUC__) || defined(__clang__)
+#  define CRYPTOPP_COMPILE_ASSERT_INSTANCE(assertion, instance) \
+       static CompileAssert<(assertion)> \
+       CRYPTOPP_ASSERT_JOIN(cryptopp_CRYPTOPP_ASSERT_, instance) __attribute__ ((unused))
+# else
+#  define CRYPTOPP_COMPILE_ASSERT_INSTANCE(assertion, instance) \
+       static CompileAssert<(assertion)> \
+       CRYPTOPP_ASSERT_JOIN(cryptopp_CRYPTOPP_ASSERT_, instance)
+# endif // GCC or Clang
+#endif
 
 #endif // CRYPTOPP_DOXYGEN_PROCESSING
 
@@ -210,7 +218,6 @@ class CRYPTOPP_NO_VTABLE ThreeBases : public BASE1, public BASE2, public BASE3
 };
 #endif // CRYPTOPP_DOXYGEN_PROCESSING
 
-/// \class ObjectHolder
 /// \tparam T class or type
 /// \brief Uses encapsulation to hide an object in derived classes
 /// \details The object T is declared as protected.
@@ -221,22 +228,25 @@ protected:
 	T m_object;
 };
 
-/// \class NotCopyable
 /// \brief Ensures an object is not copyable
 /// \details NotCopyable ensures an object is not copyable by making the
-///   copy constructor and assignment operator private. Deleters are not
-///   used under C++11.
+///   copy constructor and assignment operator private. Deleters are used
+///   under C++11.
 /// \sa Clonable class
 class NotCopyable
 {
 public:
 	NotCopyable() {}
+#if CRYPTOPP_CXX11_DELETED_FUNCTIONS
+	NotCopyable(const NotCopyable &) = delete;
+	void operator=(const NotCopyable &) = delete;
+#else
 private:
-    NotCopyable(const NotCopyable &);
-    void operator=(const NotCopyable &);
+	NotCopyable(const NotCopyable &);
+	void operator=(const NotCopyable &);
+#endif
 };
 
-/// \class NewObject
 /// \brief An object factory function
 /// \tparam T class or type
 /// \details NewObject overloads operator()().
@@ -363,13 +373,123 @@ template <class T, class F, int instance>
 
 // ************** misc functions ***************
 
+/// \brief Create a pointer with an offset
+/// \tparam PTR a pointer type
+/// \tparam OFF a size type
+/// \param pointer a pointer
+/// \param offset a offset into the pointer
+/// \details PtrAdd can be used to squash Clang and GCC
+///   UBsan findings for pointer addition and subtraction.
+template <typename PTR, typename OFF>
+inline PTR PtrAdd(PTR pointer, OFF offset)
+{
+	return pointer+static_cast<ptrdiff_t>(offset);
+}
+
+/// \brief Create a pointer with an offset
+/// \tparam PTR a pointer type
+/// \tparam OFF a size type
+/// \param pointer a pointer
+/// \param offset a offset into the pointer
+/// \details PtrSub can be used to squash Clang and GCC
+///   UBsan findings for pointer addition and subtraction.
+template <typename PTR, typename OFF>
+inline PTR PtrSub(PTR pointer, OFF offset)
+{
+	return pointer-static_cast<ptrdiff_t>(offset);
+}
+
+/// \brief Determine pointer difference
+/// \tparam PTR a pointer type
+/// \param pointer1 the first pointer
+/// \param pointer2 the second pointer
+/// \details PtrDiff can be used to squash Clang and GCC
+///   UBsan findings for pointer addition and subtraction.
+///   pointer1 and pointer2 must point to the same object or
+///   array (or one past the end), and yields the number of
+///   elements (not bytes) difference.
+template <typename PTR>
+inline ptrdiff_t PtrDiff(const PTR pointer1, const PTR pointer2)
+{
+	return pointer1 - pointer2;
+}
+
+/// \brief Determine pointer difference
+/// \tparam PTR a pointer type
+/// \param pointer1 the first pointer
+/// \param pointer2 the second pointer
+/// \details PtrByteDiff can be used to squash Clang and GCC
+///   UBsan findings for pointer addition and subtraction.
+///   pointer1 and pointer2 must point to the same object or
+///   array (or one past the end), and yields the number of
+///   bytes (not elements) difference.
+template <typename PTR>
+inline size_t PtrByteDiff(const PTR pointer1, const PTR pointer2)
+{
+	return (size_t)(reinterpret_cast<uintptr_t>(pointer1) - reinterpret_cast<uintptr_t>(pointer2));
+}
+
+/// \brief Pointer to the first element of a string
+/// \param str std::string
+/// \details BytePtr returns NULL pointer for an empty string.
+/// \return Pointer to the first element of a string
+/// \since Crypto++ 8.0
+inline byte* BytePtr(std::string& str)
+{
+	// Caller wants a writeable pointer
+	CRYPTOPP_ASSERT(str.empty() == false);
+
+	if (str.empty())
+		return NULLPTR;
+	return reinterpret_cast<byte*>(&str[0]);
+}
+
+/// \brief Pointer to the first element of a string
+/// \param str SecByteBlock
+/// \details BytePtr returns NULL pointer for an empty string.
+/// \return Pointer to the first element of a string
+/// \since Crypto++ 8.3
+byte* BytePtr(SecByteBlock& str);
+
+/// \brief Const pointer to the first element of a string
+/// \param str std::string
+/// \details ConstBytePtr returns non-NULL pointer for an empty string.
+/// \return Pointer to the first element of a string
+/// \since Crypto++ 8.0
+inline const byte* ConstBytePtr(const std::string& str)
+{
+	if (str.empty())
+		return NULLPTR;
+	return reinterpret_cast<const byte*>(&str[0]);
+}
+
+/// \brief Const pointer to the first element of a string
+/// \param str SecByteBlock
+/// \details ConstBytePtr returns non-NULL pointer for an empty string.
+/// \return Pointer to the first element of a string
+/// \since Crypto++ 8.3
+const byte* ConstBytePtr(const SecByteBlock& str);
+
+/// \brief Size of a string
+/// \param str std::string
+/// \return size of a string
+inline size_t BytePtrSize(const std::string& str)
+{
+	return str.size();
+}
+
+/// \brief Size of a string
+/// \param str SecByteBlock
+/// \return size of a string
+size_t BytePtrSize(const SecByteBlock& str);
+
 #if (!__STDC_WANT_SECURE_LIB__ && !defined(_MEMORY_S_DEFINED)) || defined(CRYPTOPP_WANT_SECURE_LIB)
 
 /// \brief Bounds checking replacement for memcpy()
 /// \param dest pointer to the desination memory block
-/// \param sizeInBytes the size of the desination memory block, in bytes
+/// \param sizeInBytes size of the desination memory block, in bytes
 /// \param src pointer to the source memory block
-/// \param count the size of the source memory block, in bytes
+/// \param count the number of bytes to copy
 /// \throws InvalidArgument
 /// \details ISO/IEC TR-24772 provides bounds checking interfaces for potentially
 ///   unsafe functions like memcpy(), strcpy() and memmove(). However,
@@ -389,8 +509,11 @@ inline void memcpy_s(void *dest, size_t sizeInBytes, const void *src, size_t cou
 
 	// Pointers must be valid; otherwise undefined behavior
 	CRYPTOPP_ASSERT(dest != NULLPTR); CRYPTOPP_ASSERT(src != NULLPTR);
+	// Restricted pointers. We want to check ranges, but it is not clear how to do it.
+	CRYPTOPP_ASSERT(src != dest);
 	// Destination buffer must be large enough to satsify request
 	CRYPTOPP_ASSERT(sizeInBytes >= count);
+
 	if (count > sizeInBytes)
 		throw InvalidArgument("memcpy_s: buffer overflow");
 
@@ -409,9 +532,9 @@ inline void memcpy_s(void *dest, size_t sizeInBytes, const void *src, size_t cou
 
 /// \brief Bounds checking replacement for memmove()
 /// \param dest pointer to the desination memory block
-/// \param sizeInBytes the size of the desination memory block, in bytes
+/// \param sizeInBytes size of the desination memory block, in bytes
 /// \param src pointer to the source memory block
-/// \param count the size of the source memory block, in bytes
+/// \param count the number of bytes to copy
 /// \throws InvalidArgument
 /// \details ISO/IEC TR-24772 provides bounds checking interfaces for potentially
 ///   unsafe functions like memcpy(), strcpy() and memmove(). However,
@@ -433,6 +556,7 @@ inline void memmove_s(void *dest, size_t sizeInBytes, const void *src, size_t co
 	CRYPTOPP_ASSERT(dest != NULLPTR); CRYPTOPP_ASSERT(src != NULLPTR);
 	// Destination buffer must be large enough to satsify request
 	CRYPTOPP_ASSERT(sizeInBytes >= count);
+
 	if (count > sizeInBytes)
 		throw InvalidArgument("memmove_s: buffer overflow");
 
@@ -527,6 +651,7 @@ template <class T> inline const T& STDMAX(const T& a, const T& b)
 #if CRYPTOPP_GCC_DIAGNOSTIC_AVAILABLE
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wsign-compare"
+# pragma GCC diagnostic ignored "-Wstrict-overflow"
 # if (CRYPTOPP_LLVM_CLANG_VERSION >= 20800) || (CRYPTOPP_APPLE_CLANG_VERSION >= 30000)
 #  pragma GCC diagnostic ignored "-Wtautological-compare"
 # elif (CRYPTOPP_GCC_VERSION >= 40300)
@@ -559,7 +684,7 @@ template <class T1, class T2> inline const T1 UnsignedMin(const T1& a, const T2&
 template <class T1, class T2>
 inline bool SafeConvert(T1 from, T2 &to)
 {
-	to = (T2)from;
+	to = static_cast<T2>(from);
 	if (from != to || (from > 0) != (to > 0))
 		return false;
 	return true;
@@ -574,7 +699,7 @@ template <class T>
 std::string IntToString(T value, unsigned int base = 10)
 {
 	// Hack... set the high bit for uppercase.
-	static const unsigned int HIGH_BIT = (1U << 31);
+	const unsigned int HIGH_BIT = (1U << 31);
 	const char CH = !!(base & HIGH_BIT) ? 'A' : 'a';
 	base &= ~HIGH_BIT;
 
@@ -727,7 +852,7 @@ inline unsigned int TrailingZeros(word32 v)
 #elif defined(_MSC_VER) && (_MSC_VER >= 1400)
 	unsigned long result;
 	_BitScanForward(&result, v);
-	return (unsigned int)result;
+	return static_cast<unsigned int>(result);
 #else
 	// from http://graphics.stanford.edu/~seander/bithacks.html#ZerosOnRightMultLookup
 	static const int MultiplyDeBruijnBitPosition[32] =
@@ -758,7 +883,7 @@ inline unsigned int TrailingZeros(word64 v)
 #elif defined(_MSC_VER) && (_MSC_VER >= 1400) && (defined(_M_X64) || defined(_M_IA64))
 	unsigned long result;
 	_BitScanForward64(&result, v);
-	return (unsigned int)result;
+	return static_cast<unsigned int>(result);
 #else
 	return word32(v) ? TrailingZeros(word32(v)) : 32 + TrailingZeros(word32(v>>32));
 #endif
@@ -841,18 +966,21 @@ CRYPTOPP_DLL void CRYPTOPP_API xorbuf(byte *output, const byte *input, const byt
 /// \param buf1 the first buffer
 /// \param buf2 the second buffer
 /// \param count the size of the buffers, in bytes
-/// \details The function effectively performs an XOR of the elements in two equally sized buffers
-///   and retruns a result based on the XOR operation. The function is near constant-time because
-///   CPU micro-code timings could affect the "constant-ness". Calling code is responsible for
-///   mitigating timing attacks if the buffers are not equally sized.
+/// \details VerifyBufsEqual performs an XOR of the elements in two equally sized
+///   buffers and retruns a result based on the XOR operation. A count of 0 returns
+///   true because two empty buffers are considered equal.
+/// \details The function is near constant-time because CPU micro-code timings could
+///   affect the "constant-ness". Calling code is responsible for mitigating timing
+///   attacks if the buffers are not equally sized.
 /// \sa ModPowerOf2
 CRYPTOPP_DLL bool CRYPTOPP_API VerifyBufsEqual(const byte *buf1, const byte *buf2, size_t count);
 
 /// \brief Tests whether a value is a power of 2
 /// \param value the value to test
 /// \returns true if value is a power of 2, false otherwise
-/// \details The function creates a mask of <tt>value - 1</tt> and returns the result of
-///   an AND operation compared to 0. If value is 0 or less than 0, then the function returns false.
+/// \details The function creates a mask of <tt>value - 1</tt> and returns the result
+///   of an AND operation compared to 0. If value is 0 or less than 0, then the function
+///   returns false.
 template <class T>
 inline bool IsPowerOf2(const T &value)
 {
@@ -875,13 +1003,65 @@ inline bool IsPowerOf2<word64>(const word64 &value)
 # endif  // __x86_64__
 #endif   // __BMI__
 
+/// \brief Provide the minimum value for a type
+/// \tparam T type of class
+/// \returns the minimum value of the type or class
+/// \details NumericLimitsMin() was introduced for Clang at <A
+///  HREF="http://github.com/weidai11/cryptopp/issues/364">Issue 364,
+///  Apple Clang 6.0 and numeric_limits<word128>::max() returns 0</A>.
+/// \details NumericLimitsMin() requires a specialization for <tt>T</tt>,
+///  meaning <tt>std::numeric_limits<T>::is_specialized</tt> must return
+///  <tt>true</tt>. In the case of <tt>word128</tt> Clang did not specialize
+///  <tt>numeric_limits</tt> for the type.
+/// \since Crypto++ 8.1
+template<class T>
+inline T NumericLimitsMin()
+{
+	CRYPTOPP_ASSERT(std::numeric_limits<T>::is_specialized);
+	return (std::numeric_limits<T>::min)();
+}
+
+/// \brief Provide the maximum value for a type
+/// \tparam T type of class
+/// \returns the maximum value of the type or class
+/// \details NumericLimitsMax() was introduced for Clang at <A
+///  HREF="http://github.com/weidai11/cryptopp/issues/364">Issue 364,
+///  Apple Clang 6.0 and numeric_limits<word128>::max() returns 0</A>.
+/// \details NumericLimitsMax() requires a specialization for <tt>T</tt>,
+///  meaning <tt>std::numeric_limits<T>::is_specialized</tt> must return
+///  <tt>true</tt>. In the case of <tt>word128</tt> Clang did not specialize
+///  <tt>numeric_limits</tt> for the type.
+/// \since Crypto++ 8.1
+template<class T>
+inline T NumericLimitsMax()
+{
+	CRYPTOPP_ASSERT(std::numeric_limits<T>::is_specialized);
+	return (std::numeric_limits<T>::max)();
+}
+
+// NumericLimitsMin and NumericLimitsMax added for word128 types,
+//   see http://github.com/weidai11/cryptopp/issues/364
+#if defined(CRYPTOPP_WORD128_AVAILABLE)
+template<>
+inline word128 NumericLimitsMin()
+{
+	return 0;
+}
+template<>
+inline word128 NumericLimitsMax()
+{
+	return (static_cast<word128>(LWORD_MAX) << 64U) | LWORD_MAX;
+}
+#endif
+
 /// \brief Performs a saturating subtract clamped at 0
 /// \tparam T1 class or type
 /// \tparam T2 class or type
 /// \param a the minuend
 /// \param b the subtrahend
 /// \returns the difference produced by the saturating subtract
-/// \details Saturating arithmetic restricts results to a fixed range. Results that are less than 0 are clamped at 0.
+/// \details Saturating arithmetic restricts results to a fixed range. Results that are
+///   less than 0 are clamped at 0.
 /// \details Use of saturating arithmetic in places can be advantageous because it can
 ///   avoid a branch by using an instruction like a conditional move (<tt>CMOVE</tt>).
 template <class T1, class T2>
@@ -897,8 +1077,8 @@ inline T1 SaturatingSubtract(const T1 &a, const T2 &b)
 /// \param a the minuend
 /// \param b the subtrahend
 /// \returns the difference produced by the saturating subtract
-/// \details Saturating arithmetic restricts results to a fixed range. Results that are less than
-///   1 are clamped at 1.
+/// \details Saturating arithmetic restricts results to a fixed range. Results that are
+///   less than 1 are clamped at 1.
 /// \details Use of saturating arithmetic in places can be advantageous because it can
 ///   avoid a branch by using an instruction like a conditional move (<tt>CMOVE</tt>).
 template <class T1, class T2>
@@ -985,27 +1165,24 @@ inline T1 RoundUpToMultipleOf(const T1 &n, const T2 &m)
 /// \brief Returns the minimum alignment requirements of a type
 /// \tparam T class or type
 /// \returns the minimum alignment requirements of <tt>T</tt>, in bytes
-/// \details Internally the function calls C++11's <tt>alignof</tt> if available. If not available,
-///   then the function uses compiler specific extensions such as <tt>__alignof</tt> and
-///   <tt>_alignof_</tt>. If an extension is not available, then the function uses
-///   <tt>__BIGGEST_ALIGNMENT__</tt> if <tt>__BIGGEST_ALIGNMENT__</tt> is smaller than <tt>sizeof(T)</tt>.
-///   <tt>sizeof(T)</tt> is used if all others are not available.
-///   In <em>all</em> cases, if <tt>CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS</tt> is defined, then the
-///   function returns 1.
+/// \details Internally the function calls C++11's <tt>alignof</tt> if available. If not
+///   available, then the function uses compiler specific extensions such as
+///   <tt>__alignof</tt> and <tt>_alignof_</tt>. If an extension is not available, then
+///   the function uses <tt>__BIGGEST_ALIGNMENT__</tt> if <tt>__BIGGEST_ALIGNMENT__</tt>
+///   is smaller than <tt>sizeof(T)</tt>. <tt>sizeof(T)</tt> is used if all others are
+///   not available.
 template <class T>
 inline unsigned int GetAlignmentOf()
 {
-// GCC 4.6 (circa 2008) and above aggressively uses vectorization.
-#if defined(CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS)
-	if (sizeof(T) < 16)
-		return 1;
-#endif
-
 #if defined(CRYPTOPP_CXX11_ALIGNOF)
 	return alignof(T);
 #elif (_MSC_VER >= 1300)
 	return __alignof(T);
 #elif defined(__GNUC__)
+	return __alignof__(T);
+#elif defined(__SUNPRO_CC)
+	return __alignof__(T);
+#elif defined(__IBM_ALIGNOF__)
 	return __alignof__(T);
 #elif CRYPTOPP_BOOL_SLOW_WORD64
 	return UnsignedMin(4U, sizeof(T));
@@ -1022,42 +1199,48 @@ inline unsigned int GetAlignmentOf()
 /// \brief Determines whether ptr is aligned to a minimum value
 /// \param ptr the pointer being checked for alignment
 /// \param alignment the alignment value to test the pointer against
-/// \returns true if <tt>ptr</tt> is aligned on at least <tt>alignment</tt> boundary, false otherwise
-/// \details Internally the function tests whether alignment is 1. If so, the function returns true.
-///   If not, then the function effectively performs a modular reduction and returns true if the residue is 0
+/// \returns true if <tt>ptr</tt> is aligned on at least <tt>alignment</tt>
+///  boundary, false otherwise
+/// \details Internally the function tests whether alignment is 1. If so,
+///  the function returns true. If not, then the function effectively
+///  performs a modular reduction and returns true if the residue is 0.
 inline bool IsAlignedOn(const void *ptr, unsigned int alignment)
 {
-	return alignment==1 || (IsPowerOf2(alignment) ? ModPowerOf2((size_t)ptr, alignment) == 0 : (size_t)ptr % alignment == 0);
+	const uintptr_t x = reinterpret_cast<uintptr_t>(ptr);
+	return alignment==1 || (IsPowerOf2(alignment) ? ModPowerOf2(x, alignment) == 0 : x % alignment == 0);
 }
 
 /// \brief Determines whether ptr is minimally aligned
 /// \tparam T class or type
 /// \param ptr the pointer to check for alignment
-/// \returns true if <tt>ptr</tt> is aligned to at least <tt>T</tt> boundary, false otherwise
-/// \details Internally the function calls IsAlignedOn with a second parameter of GetAlignmentOf<T>
+/// \returns true if <tt>ptr</tt> is aligned to at least <tt>T</tt>
+///  boundary, false otherwise
+/// \details Internally the function calls IsAlignedOn with a second
+///  parameter of GetAlignmentOf<T>.
 template <class T>
 inline bool IsAligned(const void *ptr)
 {
 	return IsAlignedOn(ptr, GetAlignmentOf<T>());
 }
 
-#if defined(CRYPTOPP_LITTLE_ENDIAN)
+#if (CRYPTOPP_LITTLE_ENDIAN)
 	typedef LittleEndian NativeByteOrder;
-#elif defined(CRYPTOPP_BIG_ENDIAN)
+#elif (CRYPTOPP_BIG_ENDIAN)
 	typedef BigEndian NativeByteOrder;
 #else
 # error "Unable to determine endian-ness"
 #endif
 
 /// \brief Returns NativeByteOrder as an enumerated ByteOrder value
-/// \returns LittleEndian if the native byte order is little-endian, and BigEndian if the
-///   native byte order is big-endian
-/// \details NativeByteOrder is a typedef depending on the platform. If CRYPTOPP_LITTLE_ENDIAN is
-///   set in config.h, then GetNativeByteOrder returns LittleEndian. If
-///   CRYPTOPP_BIG_ENDIAN is set, then GetNativeByteOrder returns BigEndian.
-/// \note There are other byte orders besides little- and big-endian, and they include bi-endian
-///   and PDP-endian. If a system is neither little-endian nor big-endian, then a compile time
-///   error occurs.
+/// \returns LittleEndian if the native byte order is little-endian,
+///  and BigEndian if the native byte order is big-endian
+/// \details NativeByteOrder is a typedef depending on the platform.
+///  If CRYPTOPP_LITTLE_ENDIAN is set in config.h, then
+///  GetNativeByteOrder returns LittleEndian. If CRYPTOPP_BIG_ENDIAN
+///  is set, then GetNativeByteOrder returns BigEndian.
+/// \note There are other byte orders besides little- and big-endian,
+///  and they include bi-endian and PDP-endian. If a system is neither
+///  little-endian nor big-endian, then a compile time error occurs.
 inline ByteOrder GetNativeByteOrder()
 {
 	return NativeByteOrder::ToEnum();
@@ -1087,16 +1270,6 @@ inline CipherDir GetCipherDir(const T &obj)
 	return obj.IsForwardTransformation() ? ENCRYPTION : DECRYPTION;
 }
 
-/// \brief Attempts to reclaim unused memory
-/// \throws bad_alloc
-/// \details In the normal course of running a program, a request for memory normally succeeds. If a
-///   call to AlignedAllocate or UnalignedAllocate fails, then CallNewHandler is called in
-///   an effort to recover. Internally, CallNewHandler calls set_new_handler(NULLPTR) in an effort
-///   to free memory. There is no guarantee CallNewHandler will be able to procure more memory so
-///   an allocation succeeds. If the call to set_new_handler fails, then CallNewHandler throws
-///   a bad_alloc exception.
-CRYPTOPP_DLL void CRYPTOPP_API CallNewHandler();
-
 /// \brief Performs an addition with carry on a block of bytes
 /// \param inout the byte block
 /// \param size the size of the block, in bytes
@@ -1105,9 +1278,15 @@ CRYPTOPP_DLL void CRYPTOPP_API CallNewHandler();
 /// \note The function is not constant time because it stops processing when the carry is 0.
 inline void IncrementCounterByOne(byte *inout, unsigned int size)
 {
-	CRYPTOPP_ASSERT(inout != NULLPTR); CRYPTOPP_ASSERT(size < INT_MAX);
-	for (int i=int(size-1), carry=1; i>=0 && carry; i--)
-		carry = !++inout[i];
+	CRYPTOPP_ASSERT(inout != NULLPTR);
+
+	unsigned int carry=1;
+	while (carry && size != 0)
+	{
+		// On carry inout[n] equals 0
+		carry = ! ++inout[size-1];
+		size--;
+	}
 }
 
 /// \brief Performs an addition with carry on a block of bytes
@@ -1119,12 +1298,22 @@ inline void IncrementCounterByOne(byte *inout, unsigned int size)
 /// \details The function is close to near-constant time because it operates on all the bytes in the blocks.
 inline void IncrementCounterByOne(byte *output, const byte *input, unsigned int size)
 {
-	CRYPTOPP_ASSERT(output != NULLPTR); CRYPTOPP_ASSERT(input != NULLPTR); CRYPTOPP_ASSERT(size < INT_MAX);
+	CRYPTOPP_ASSERT(output != NULLPTR);
+	CRYPTOPP_ASSERT(input != NULLPTR);
 
-	int i, carry;
-	for (i=int(size-1), carry=1; i>=0 && carry; i--)
-		carry = ((output[i] = input[i]+1) == 0);
-	memcpy_s(output, size, input, size_t(i)+1);
+	unsigned int carry=1;
+	while (carry && size != 0)
+	{
+		// On carry output[n] equals 0
+		carry = ! (output[size-1] = input[size-1] + 1);
+		size--;
+	}
+
+	while (size != 0)
+	{
+		output[size-1] = input[size-1];
+		size--;
+	}
 }
 
 /// \brief Performs a branchless swap of values a and b if condition c is true
@@ -1160,81 +1349,89 @@ inline void ConditionalSwapPointers(bool c, T &a, T &b)
 /// \tparam T class or type
 /// \param buf an array of elements
 /// \param n the number of elements in the array
-/// \details The operation performs a wipe or zeroization. The function attempts to survive optimizations and dead code removal
+/// \details The operation performs a wipe or zeroization. The function
+///   attempts to survive optimizations and dead code removal.
 template <class T>
 void SecureWipeBuffer(T *buf, size_t n)
 {
-	// GCC 4.3.2 on Cygwin optimizes away the first store if this loop is done in the forward direction
+	// GCC 4.3.2 on Cygwin optimizes away the first store if this
+	// loop is done in the forward direction
 	volatile T *p = buf+n;
 	while (n--)
 		*(--p) = 0;
 }
 
-#if (_MSC_VER >= 1400 || defined(__GNUC__)) && (CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X86)
+#if !defined(CRYPTOPP_DISABLE_ASM) && \
+    (_MSC_VER >= 1400 || defined(__GNUC__)) && \
+    (CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X86)
 
 /// \brief Sets each byte of an array to 0
 /// \param buf an array of bytes
 /// \param n the number of elements in the array
-/// \details The operation performs a wipe or zeroization. The function attempts to survive optimizations and dead code removal.
+/// \details The operation performs a wipe or zeroization. The function
+///   attempts to survive optimizations and dead code removal.
 template<> inline void SecureWipeBuffer(byte *buf, size_t n)
 {
 	volatile byte *p = buf;
 #ifdef __GNUC__
 	asm volatile("rep stosb" : "+c"(n), "+D"(p) : "a"(0) : "memory");
 #else
-	__stosb((byte *)(size_t)p, 0, n);
+	__stosb(reinterpret_cast<byte *>(reinterpret_cast<size_t>(p)), 0, n);
 #endif
 }
 
 /// \brief Sets each 16-bit element of an array to 0
 /// \param buf an array of 16-bit words
 /// \param n the number of elements in the array
-/// \details The operation performs a wipe or zeroization. The function attempts to survive optimizations and dead code removal.
+/// \details The operation performs a wipe or zeroization. The function
+///   attempts to survive optimizations and dead code removal.
 template<> inline void SecureWipeBuffer(word16 *buf, size_t n)
 {
 	volatile word16 *p = buf;
 #ifdef __GNUC__
 	asm volatile("rep stosw" : "+c"(n), "+D"(p) : "a"(0) : "memory");
 #else
-	__stosw((word16 *)(size_t)p, 0, n);
+	__stosw(reinterpret_cast<word16 *>(reinterpret_cast<size_t>(p)), 0, n);
 #endif
 }
 
 /// \brief Sets each 32-bit element of an array to 0
 /// \param buf an array of 32-bit words
 /// \param n the number of elements in the array
-/// \details The operation performs a wipe or zeroization. The function attempts to survive optimizations and dead code removal.
+/// \details The operation performs a wipe or zeroization. The function
+///   attempts to survive optimizations and dead code removal.
 template<> inline void SecureWipeBuffer(word32 *buf, size_t n)
 {
 	volatile word32 *p = buf;
 #ifdef __GNUC__
 	asm volatile("rep stosl" : "+c"(n), "+D"(p) : "a"(0) : "memory");
 #else
-	__stosd((unsigned long *)(size_t)p, 0, n);
+	__stosd(reinterpret_cast<unsigned long *>(reinterpret_cast<size_t>(p)), 0, n);
 #endif
 }
 
 /// \brief Sets each 64-bit element of an array to 0
 /// \param buf an array of 64-bit words
 /// \param n the number of elements in the array
-/// \details The operation performs a wipe or zeroization. The function attempts to survive optimizations and dead code removal.
+/// \details The operation performs a wipe or zeroization. The function
+///   attempts to survive optimizations and dead code removal.
 template<> inline void SecureWipeBuffer(word64 *buf, size_t n)
 {
 #if CRYPTOPP_BOOL_X64
 	volatile word64 *p = buf;
-#ifdef __GNUC__
+# ifdef __GNUC__
 	asm volatile("rep stosq" : "+c"(n), "+D"(p) : "a"(0) : "memory");
+# else
+	__stosq(const_cast<word64 *>(p), 0, n);
+# endif
 #else
-	__stosq((word64 *)(size_t)p, 0, n);
-#endif
-#else
-	SecureWipeBuffer((word32 *)buf, 2*n);
+	SecureWipeBuffer(reinterpret_cast<word32 *>(buf), 2*n);
 #endif
 }
 
-#endif	// #if (_MSC_VER >= 1400 || defined(__GNUC__)) && (CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X86)
+#endif	// CRYPTOPP_BOOL_X64 || CRYPTOPP_BOOL_X86
 
-#if (_MSC_VER >= 1700) && defined(_M_ARM)
+#if !defined(CRYPTOPP_DISABLE_ASM) && (_MSC_VER >= 1700) && defined(_M_ARM)
 template<> inline void SecureWipeBuffer(byte *buf, size_t n)
 {
 	char *p = reinterpret_cast<char*>(buf+n);
@@ -1268,18 +1465,19 @@ template<> inline void SecureWipeBuffer(word64 *buf, size_t n)
 /// \tparam T class or type
 /// \param buf an array of elements
 /// \param n the number of elements in the array
-/// \details The operation performs a wipe or zeroization. The function attempts to survive optimizations and dead code removal.
+/// \details The operation performs a wipe or zeroization. The function
+///   attempts to survive optimizations and dead code removal.
 template <class T>
 inline void SecureWipeArray(T *buf, size_t n)
 {
 	if (sizeof(T) % 8 == 0 && GetAlignmentOf<T>() % GetAlignmentOf<word64>() == 0)
-		SecureWipeBuffer((word64 *)(void *)buf, n * (sizeof(T)/8));
+		SecureWipeBuffer(reinterpret_cast<word64 *>(static_cast<void *>(buf)), n * (sizeof(T)/8));
 	else if (sizeof(T) % 4 == 0 && GetAlignmentOf<T>() % GetAlignmentOf<word32>() == 0)
-		SecureWipeBuffer((word32 *)(void *)buf, n * (sizeof(T)/4));
+		SecureWipeBuffer(reinterpret_cast<word32 *>(static_cast<void *>(buf)), n * (sizeof(T)/4));
 	else if (sizeof(T) % 2 == 0 && GetAlignmentOf<T>() % GetAlignmentOf<word16>() == 0)
-		SecureWipeBuffer((word16 *)(void *)buf, n * (sizeof(T)/2));
+		SecureWipeBuffer(reinterpret_cast<word16 *>(static_cast<void *>(buf)), n * (sizeof(T)/2));
 	else
-		SecureWipeBuffer((byte *)(void *)buf, n * sizeof(T));
+		SecureWipeBuffer(reinterpret_cast<byte *>(static_cast<void *>(buf)), n * sizeof(T));
 }
 
 /// \brief Converts a wide character C-string to a multibyte string
@@ -1310,39 +1508,6 @@ std::string StringNarrow(const wchar_t *str, bool throwOnError = true);
 ///   then a 0x21 error is returned on Windows which eventually results in an InvalidArgument() exception.
 std::wstring StringWiden(const char *str, bool throwOnError = true);
 
-#ifdef CRYPTOPP_DOXYGEN_PROCESSING
-
-/// \brief Allocates a buffer on 16-byte boundary
-/// \param size the size of the buffer
-/// \details AlignedAllocate is primarily used when the data will be proccessed by MMX, SSE2 and NEON
-///   instructions. The assembly language routines rely on the alignment. If the alignment is not
-///   respected, then a SIGBUS could be generated on Unix and Linux, and an
-///   EXCEPTION_DATATYPE_MISALIGNMENT could be generated on Windows.
-/// \note AlignedAllocate and AlignedDeallocate are available when CRYPTOPP_BOOL_ALIGN16 is
-///   defined. CRYPTOPP_BOOL_ALIGN16 is defined in config.h
-CRYPTOPP_DLL void* CRYPTOPP_API AlignedAllocate(size_t size);
-
-/// \brief Frees a buffer allocated with AlignedAllocate
-/// \param ptr the buffer to free
-/// \note AlignedAllocate and AlignedDeallocate are available when CRYPTOPP_BOOL_ALIGN16 is
-///   defined. CRYPTOPP_BOOL_ALIGN16 is defined in config.h
-CRYPTOPP_DLL void CRYPTOPP_API AlignedDeallocate(void *ptr);
-
-#endif // CRYPTOPP_DOXYGEN_PROCESSING
-
-#if CRYPTOPP_BOOL_ALIGN16
-CRYPTOPP_DLL void* CRYPTOPP_API AlignedAllocate(size_t size);
-CRYPTOPP_DLL void CRYPTOPP_API AlignedDeallocate(void *ptr);
-#endif // CRYPTOPP_BOOL_ALIGN16
-
-/// \brief Allocates a buffer
-/// \param size the size of the buffer
-CRYPTOPP_DLL void * CRYPTOPP_API UnalignedAllocate(size_t size);
-
-/// \brief Frees a buffer allocated with UnalignedAllocate
-/// \param ptr the buffer to free
-CRYPTOPP_DLL void CRYPTOPP_API UnalignedDeallocate(void *ptr);
-
 // ************** rotate functions ***************
 
 /// \brief Performs a left rotate
@@ -1366,9 +1531,9 @@ template <unsigned int R, class T> inline T rotlConstant(T x)
 	// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57157,
 	// http://software.intel.com/en-us/forums/topic/580884
 	// and http://llvm.org/bugs/show_bug.cgi?id=24226
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
-	CRYPTOPP_ASSERT(R < THIS_SIZE);
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8);
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1);
+	CRYPTOPP_ASSERT(static_cast<int>(R) < THIS_SIZE);
 	return T((x<<R)|(x>>(-R&MASK)));
 }
 
@@ -1392,9 +1557,9 @@ template <unsigned int R, class T> inline T rotrConstant(T x)
 	// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57157,
 	// http://software.intel.com/en-us/forums/topic/580884
 	// and http://llvm.org/bugs/show_bug.cgi?id=24226
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
-	CRYPTOPP_ASSERT(R < THIS_SIZE);
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8);
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1);
+	CRYPTOPP_ASSERT(static_cast<int>(R) < THIS_SIZE);
 	return T((x >> R)|(x<<(-R&MASK)));
 }
 
@@ -1417,9 +1582,9 @@ template <class T> inline T rotlFixed(T x, unsigned int y)
 	// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57157,
 	// http://software.intel.com/en-us/forums/topic/580884
 	// and http://llvm.org/bugs/show_bug.cgi?id=24226
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
-	CRYPTOPP_ASSERT(y < THIS_SIZE);
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8);
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1);
+	CRYPTOPP_ASSERT(static_cast<int>(y) < THIS_SIZE);
 	return T((x<<y)|(x>>(-y&MASK)));
 }
 
@@ -1442,9 +1607,9 @@ template <class T> inline T rotrFixed(T x, unsigned int y)
 	// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=57157,
 	// http://software.intel.com/en-us/forums/topic/580884
 	// and http://llvm.org/bugs/show_bug.cgi?id=24226
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
-	CRYPTOPP_ASSERT(y < THIS_SIZE);
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8);
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1);
+	CRYPTOPP_ASSERT(static_cast<int>(y) < THIS_SIZE);
 	return T((x >> y)|(x<<(-y&MASK)));
 }
 
@@ -1462,9 +1627,9 @@ template <class T> inline T rotrFixed(T x, unsigned int y)
 /// \since Crypto++ 3.0
 template <class T> inline T rotlVariable(T x, unsigned int y)
 {
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
-	CRYPTOPP_ASSERT(y < THIS_SIZE);
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8);
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1);
+	CRYPTOPP_ASSERT(static_cast<int>(y) < THIS_SIZE);
 	return T((x<<y)|(x>>(-y&MASK)));
 }
 
@@ -1482,9 +1647,9 @@ template <class T> inline T rotlVariable(T x, unsigned int y)
 /// \since Crypto++ 3.0
 template <class T> inline T rotrVariable(T x, unsigned int y)
 {
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
-	CRYPTOPP_ASSERT(y < THIS_SIZE);
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8);
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1);
+	CRYPTOPP_ASSERT(static_cast<int>(y) < THIS_SIZE);
 	return T((x>>y)|(x<<(-y&MASK)));
 }
 
@@ -1499,8 +1664,8 @@ template <class T> inline T rotrVariable(T x, unsigned int y)
 /// \since Crypto++ 3.0
 template <class T> inline T rotlMod(T x, unsigned int y)
 {
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8);
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1);
 	return T((x<<(y&MASK))|(x>>(-y&MASK)));
 }
 
@@ -1515,8 +1680,8 @@ template <class T> inline T rotlMod(T x, unsigned int y)
 /// \since Crypto++ 3.0
 template <class T> inline T rotrMod(T x, unsigned int y)
 {
-	static const unsigned int THIS_SIZE = sizeof(T)*8;
-	static const unsigned int MASK = THIS_SIZE-1;
+	CRYPTOPP_CONSTANT(THIS_SIZE = sizeof(T)*8);
+	CRYPTOPP_CONSTANT(MASK = THIS_SIZE-1);
 	return T((x>>(y&MASK))|(x<<(-y&MASK)));
 }
 
@@ -1813,7 +1978,7 @@ template<> inline word32 rotrMod<word32>(word32 x, unsigned int y)
 	return (__rlwnm(x,32-y,0,31));
 }
 
-#endif // #if (defined(__MWERKS__) && TARGET_CPU_PPC)
+#endif // __MWERKS__ && TARGET_CPU_PPC
 
 // ************** endian reversal ***************
 
@@ -1832,7 +1997,8 @@ inline unsigned int GetByte(ByteOrder order, T value, unsigned int index)
 
 /// \brief Reverses bytes in a 8-bit value
 /// \param value the 8-bit value to reverse
-/// \note ByteReverse returns the value passed to it since there is nothing to reverse
+/// \note ByteReverse returns the value passed to it since there is nothing to
+///  reverse.
 inline byte ByteReverse(byte value)
 {
 	return value;
@@ -1840,7 +2006,8 @@ inline byte ByteReverse(byte value)
 
 /// \brief Reverses bytes in a 16-bit value
 /// \param value the 16-bit value to reverse
-/// \details ByteReverse calls bswap if available. Otherwise the function performs a 8-bit rotate on the word16
+/// \details ByteReverse calls bswap if available. Otherwise the function
+///  performs a 8-bit rotate on the word16.
 inline word16 ByteReverse(word16 value)
 {
 #if defined(CRYPTOPP_BYTESWAP_AVAILABLE)
@@ -1854,14 +2021,19 @@ inline word16 ByteReverse(word16 value)
 
 /// \brief Reverses bytes in a 32-bit value
 /// \param value the 32-bit value to reverse
-/// \details ByteReverse calls bswap if available. Otherwise the function uses a combination of rotates on the word32
+/// \details ByteReverse calls bswap if available. Otherwise the function uses
+///  a combination of rotates on the word32.
 inline word32 ByteReverse(word32 value)
 {
-#if defined(__GNUC__) && defined(CRYPTOPP_X86_ASM_AVAILABLE)
+#if defined(CRYPTOPP_BYTESWAP_AVAILABLE)
+	return bswap_32(value);
+#elif defined(CRYPTOPP_ARM_BYTEREV_AVAILABLE)
+	word32 rvalue;
+	__asm__ ("rev %0, %1" : "=r" (rvalue) : "r" (value));
+	return rvalue;
+#elif defined(__GNUC__) && defined(CRYPTOPP_X86_ASM_AVAILABLE)
 	__asm__ ("bswap %0" : "=r" (value) : "0" (value));
 	return value;
-#elif defined(CRYPTOPP_BYTESWAP_AVAILABLE)
-	return bswap_32(value);
 #elif defined(__MWERKS__) && TARGET_CPU_PPC
 	return (word32)__lwbrx(&value,0);
 #elif (_MSC_VER >= 1400) || (defined(_MSC_VER) && !defined(_DLL))
@@ -1878,14 +2050,15 @@ inline word32 ByteReverse(word32 value)
 
 /// \brief Reverses bytes in a 64-bit value
 /// \param value the 64-bit value to reverse
-/// \details ByteReverse calls bswap if available. Otherwise the function uses a combination of rotates on the word64
+/// \details ByteReverse calls bswap if available. Otherwise the function uses
+///  a combination of rotates on the word64.
 inline word64 ByteReverse(word64 value)
 {
-#if defined(__GNUC__) && defined(CRYPTOPP_X86_ASM_AVAILABLE) && defined(__x86_64__)
+#if defined(CRYPTOPP_BYTESWAP_AVAILABLE)
+	return bswap_64(value);
+#elif defined(__GNUC__) && defined(CRYPTOPP_X86_ASM_AVAILABLE) && defined(__x86_64__)
 	__asm__ ("bswap %0" : "=r" (value) : "0" (value));
 	return value;
-#elif defined(CRYPTOPP_BYTESWAP_AVAILABLE)
-	return bswap_64(value);
 #elif (_MSC_VER >= 1400) || (defined(_MSC_VER) && !defined(_DLL))
 	return _byteswap_uint64(value);
 #elif CRYPTOPP_BOOL_SLOW_WORD64
@@ -1899,7 +2072,7 @@ inline word64 ByteReverse(word64 value)
 
 /// \brief Reverses bits in a 8-bit value
 /// \param value the 8-bit value to reverse
-/// \details BitReverse performs a combination of shifts on the byte
+/// \details BitReverse performs a combination of shifts on the byte.
 inline byte BitReverse(byte value)
 {
 	value = byte((value & 0xAA) >> 1) | byte((value & 0x55) << 1);
@@ -1909,29 +2082,45 @@ inline byte BitReverse(byte value)
 
 /// \brief Reverses bits in a 16-bit value
 /// \param value the 16-bit value to reverse
-/// \details BitReverse performs a combination of shifts on the word16
+/// \details BitReverse performs a combination of shifts on the word16.
 inline word16 BitReverse(word16 value)
 {
+#if defined(CRYPTOPP_ARM_BITREV_AVAILABLE)
+	// 4 instructions on ARM.
+	word32 rvalue;
+	__asm__ ("rbit %0, %1" : "=r" (rvalue) : "r" (value));
+	return word16(rvalue >> 16);
+#else
+	// 15 instructions on ARM.
 	value = word16((value & 0xAAAA) >> 1) | word16((value & 0x5555) << 1);
 	value = word16((value & 0xCCCC) >> 2) | word16((value & 0x3333) << 2);
 	value = word16((value & 0xF0F0) >> 4) | word16((value & 0x0F0F) << 4);
 	return ByteReverse(value);
+#endif
 }
 
 /// \brief Reverses bits in a 32-bit value
 /// \param value the 32-bit value to reverse
-/// \details BitReverse performs a combination of shifts on the word32
+/// \details BitReverse performs a combination of shifts on the word32.
 inline word32 BitReverse(word32 value)
 {
+#if defined(CRYPTOPP_ARM_BITREV_AVAILABLE)
+	// 2 instructions on ARM.
+	word32 rvalue;
+	__asm__ ("rbit %0, %1" : "=r" (rvalue) : "r" (value));
+	return rvalue;
+#else
+	// 19 instructions on ARM.
 	value = word32((value & 0xAAAAAAAA) >> 1) | word32((value & 0x55555555) << 1);
 	value = word32((value & 0xCCCCCCCC) >> 2) | word32((value & 0x33333333) << 2);
 	value = word32((value & 0xF0F0F0F0) >> 4) | word32((value & 0x0F0F0F0F) << 4);
 	return ByteReverse(value);
+#endif
 }
 
 /// \brief Reverses bits in a 64-bit value
 /// \param value the 64-bit value to reverse
-/// \details BitReverse performs a combination of shifts on the word64
+/// \details BitReverse performs a combination of shifts on the word64.
 inline word64 BitReverse(word64 value)
 {
 #if CRYPTOPP_BOOL_SLOW_WORD64
@@ -1959,9 +2148,11 @@ inline T BitReverse(T value)
 		return (T)BitReverse((word16)value);
 	else if (sizeof(T) == 4)
 		return (T)BitReverse((word32)value);
+	else if (sizeof(T) == 8)
+		return (T)BitReverse((word64)value);
 	else
 	{
-		CRYPTOPP_ASSERT(sizeof(T) == 8);
+		CRYPTOPP_ASSERT(0);
 		return (T)BitReverse((word64)value);
 	}
 }
@@ -1990,7 +2181,7 @@ inline T ConditionalByteReverse(ByteOrder order, T value)
 ///   not part of a full element. If T is int (and int is 4 bytes), then
 ///   <tt>byteCount = 10</tt> means only the first 2 elements or 8 bytes are
 ///   reversed.
-/// \details The follwoing program should help illustrate the behavior.
+/// \details The following program should help illustrate the behavior.
 /// <pre>vector<word32> v1, v2;
 ///
 /// v1.push_back(1);
@@ -2010,14 +2201,18 @@ inline T ConditionalByteReverse(ByteOrder order, T value)
 /// for(unsigned int i = 0; i < v2.size(); i++)
 ///   cout << std::hex << v2[i] << " ";
 /// cout << endl;</pre>
-/// The program above results in the follwoing output.
+/// The program above results in the following output.
 /// <pre>V1: 00000001 00000002 00000003 00000004
 /// V2: 01000000 02000000 03000000 04000000</pre>
 /// \sa ConditionalByteReverse
 template <class T>
 void ByteReverse(T *out, const T *in, size_t byteCount)
 {
+	// Alignment check due to Issues 690
 	CRYPTOPP_ASSERT(byteCount % sizeof(T) == 0);
+	CRYPTOPP_ASSERT(IsAligned<T>(in));
+	CRYPTOPP_ASSERT(IsAligned<T>(out));
+
 	size_t count = byteCount/sizeof(T);
 	for (size_t i=0; i<count; i++)
 		out[i] = ByteReverse(in[i]);
@@ -2055,7 +2250,6 @@ inline void GetUserKey(ByteOrder order, T *out, size_t outlen, const byte *in, s
 	ConditionalByteReverse(order, out, out, RoundUpToMultipleOf(inlen, U));
 }
 
-#ifndef CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS
 inline byte UnalignedGetWordNonTemplate(ByteOrder order, const byte *block, const byte *)
 {
 	CRYPTOPP_UNUSED(order);
@@ -2102,7 +2296,7 @@ inline word64 UnalignedGetWordNonTemplate(ByteOrder order, const byte *block, co
 inline void UnalignedbyteNonTemplate(ByteOrder order, byte *block, byte value, const byte *xorBlock)
 {
 	CRYPTOPP_UNUSED(order);
-	block[0] = (byte)(xorBlock ? (value ^ xorBlock[0]) : value);
+	block[0] = static_cast<byte>(xorBlock ? (value ^ xorBlock[0]) : value);
 }
 
 inline void UnalignedbyteNonTemplate(ByteOrder order, byte *block, word16 value, const byte *xorBlock)
@@ -2226,7 +2420,6 @@ inline void UnalignedbyteNonTemplate(ByteOrder order, byte *block, word64 value,
 		}
 	}
 }
-#endif	// #ifndef CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS
 
 /// \brief Access a block of memory
 /// \tparam T class or type
@@ -2248,13 +2441,10 @@ template <class T>
 inline T GetWord(bool assumeAligned, ByteOrder order, const byte *block)
 {
 	CRYPTOPP_UNUSED(assumeAligned);
-#ifdef CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS
-	return ConditionalByteReverse(order, *reinterpret_cast<const T *>((const void *)block));
-#else
+
 	T temp;
 	memcpy(&temp, block, sizeof(T));
 	return ConditionalByteReverse(order, temp);
-#endif
 }
 
 /// \brief Access a block of memory
@@ -2293,17 +2483,13 @@ template <class T>
 inline void PutWord(bool assumeAligned, ByteOrder order, byte *block, T value, const byte *xorBlock = NULLPTR)
 {
 	CRYPTOPP_UNUSED(assumeAligned);
-#ifdef CRYPTOPP_ALLOW_UNALIGNED_DATA_ACCESS
-	*reinterpret_cast<T *>((void *)block) = ConditionalByteReverse(order, value) ^ (xorBlock ? *reinterpret_cast<const T *>((const void *)xorBlock) : 0);
-#else
+
 	T t1, t2;
 	t1 = ConditionalByteReverse(order, value);
 	if (xorBlock) {memcpy(&t2, xorBlock, sizeof(T)); t1 ^= t2;}
 	memcpy(block, &t1, sizeof(T));
-#endif
 }
 
-/// \class GetBlock
 /// \brief Access a block of memory
 /// \tparam T class or type
 /// \tparam B enumeration indicating endianness
@@ -2345,7 +2531,6 @@ private:
 	const byte *m_block;
 };
 
-/// \class PutBlock
 /// \brief Access a block of memory
 /// \tparam T class or type
 /// \tparam B enumeration indicating endianness
@@ -2390,7 +2575,6 @@ private:
 	byte *m_block;
 };
 
-/// \class BlockGetAndPut
 /// \brief Access a block of memory
 /// \tparam T class or type
 /// \tparam B enumeration indicating endianness
@@ -2436,7 +2620,6 @@ T StringToWord(const std::string &str, ByteOrder order = BIG_ENDIAN_ORDER)
 
 // ************** help remove warning on g++ ***************
 
-/// \class SafeShifter
 /// \brief Safely shift values when undefined behavior could occur
 /// \tparam overflow boolean flag indicating if overflow is present
 /// \details SafeShifter safely shifts values when undefined behavior could occur under C/C++ rules.
@@ -2445,7 +2628,6 @@ T StringToWord(const std::string &str, ByteOrder order = BIG_ENDIAN_ORDER)
 /// \sa SafeShifter<true>, SafeShifter<false>
 template <bool overflow> struct SafeShifter;
 
-/// \class SafeShifter<true>
 /// \brief Shifts a value in the presence of overflow
 /// \details the true template parameter indicates overflow would occur.
 ///   In this case, SafeShifter clamps the value and returns 0.
@@ -2476,7 +2658,6 @@ template<> struct SafeShifter<true>
 	}
 };
 
-/// \class SafeShifter<false>
 /// \brief Shifts a value in the absence of overflow
 /// \details the false template parameter indicates overflow would not occur.
 ///   In this case, SafeShifter returns the shfted value.
