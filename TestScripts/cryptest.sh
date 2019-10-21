@@ -238,7 +238,8 @@ fi
 
 # Now that the compiler is fixed, determine the compiler version for fixups
 GCC_51_OR_ABOVE=$("$CXX" -v 2>&1 | "$GREP" -i -c -E 'gcc version (5\.[1-9]|[6-9])')
-GCC_48_COMPILER=$("$CXX" -v 2>&1 | "$GREP" -i -c -E 'gcc version 4\.8')
+GCC_48=$("$CXX" -v 2>&1 | "$GREP" -i -c -E 'gcc version 4\.8')
+GCC_48_OR_ABOVE=$("$CXX" -v 2>&1 | "$GREP" -i -c -E 'gcc version (4\.[8-9]|[5-9]\.[0-9])')
 SUNCC_510_OR_ABOVE=$("$CXX" -V 2>&1 | "$GREP" -c -E "CC: (Sun|Studio) .* (5\.1[0-9]|5\.[2-9]|[6-9]\.)")
 SUNCC_511_OR_ABOVE=$("$CXX" -V 2>&1 | "$GREP" -c -E "CC: (Sun|Studio) .* (5\.1[1-9]|5\.[2-9]|[6-9]\.)")
 
@@ -252,6 +253,7 @@ fi
 if [[ (-z "$TMPDIR") ]]; then
 	if [[ (-d "/tmp") ]] && [[ $(touch "/tmp/ok-to-delete" &>/dev/null) ]]; then
 		TMPDIR=/tmp
+		rm -f "/tmp/ok-to-delete"
 	elif [[ (-d "/temp") ]]; then
 		TMPDIR=/temp
 	elif [[ (-d "$HOME/tmp") ]]; then
@@ -764,7 +766,7 @@ if [[ "$IS_DARWIN" -ne 0 ]]; then
 fi
 
 # Fixup... GCC 4.8 ASAN produces false positives under ARM
-if [[ ( ("$IS_ARM32" -ne 0 || "$IS_ARM64" -ne 0) && "$GCC_48_COMPILER" -ne 0) ]]; then
+if [[ ( ("$IS_ARM32" -ne 0 || "$IS_ARM64" -ne 0) && "$GCC_48" -ne 0) ]]; then
 	HAVE_ASAN=0
 fi
 
@@ -943,14 +945,28 @@ elif [[ (-e "/proc/cpuinfo") ]]; then
 	if [[ -z "$CPU_FREQ" ]]; then CPU_FREQ=512; fi
 	CPU_FREQ="$(echo $CPU_FREQ | $AWK '{print $0/1024}')"
 elif [[ "$IS_DARWIN" -ne 0 ]]; then
-	CPU_FREQ="$(sysctl -a 2>&1 | $GREP "hw.cpufrequency" | $AWK '{print ($3); exit;}')"
-	CPU_FREQ="$(echo $CPU_FREQ | $AWK '{print $0/1024/1024/1024}')"
+	CPU_FREQ="$(sysctl -a 2>&1 | $GREP "hw.cpufrequency" | $AWK '{print int($3); exit;}')"
+	CPU_FREQ="$(echo $CPU_FREQ | $AWK '{print int($0/1024/1024/1024)}')"
 elif [[ "$IS_SOLARIS" -ne 0 ]]; then
 	CPU_FREQ="$(psrinfo -v 2>/dev/null | $GREP "MHz" | $AWK '{print $6; exit;}')"
 	CPU_FREQ="$(echo $CPU_FREQ | $AWK '{print $0/1024}')"
 elif [[ "$IS_AIX" -ne 0 ]]; then
 	CPU_FREQ="$(prtconf -s 2>/dev/null | $GREP "MHz" | $AWK '{print $4; exit;}')"
 	CPU_FREQ="$(echo $CPU_FREQ | $AWK '{print $0/1024}')"
+fi
+
+# Fixups for later versions of OS X
+if [[ "$IS_DARWIN" -ne 0 ]]; then
+	if [[ (-z "$CPU_COUNT") || ("$CPU_COUNT" -eq 0) ]]; then
+		CPU_COUNT="$(sysctl -a 2>&1 | $GREP "hw.activecpu" | $AWK '{print $2; exit}')"
+	fi
+	if [[ (-z "$MEM_SIZE") || ("$MEM_SIZE" -eq 0) ]]; then
+		MEM_SIZE="$(sysctl -a 2>&1 | $GREP "hw.memsize" | $AWK '{print int($2/1024/1024); exit;}')"
+	fi
+	if [[ (-z "$CPU_FREQ") || ("$CPU_FREQ" -eq 0) ]]; then
+		CPU_FREQ="$(sysctl -a 2>&1 | $GREP "hw.cpufrequency" | $AWK '{print int($2); exit;}')"
+		CPU_FREQ="$(echo $CPU_FREQ | $AWK '{print int($0/1024/1024/1024)}')"
+	fi
 fi
 
 # Some ARM devboards cannot use 'make -j N', even with multiple cores and RAM
@@ -1770,7 +1786,7 @@ fi
 
 ############################################
 # Power8 code generation tests
-if [[ ("$HAVE_DISASS" -ne 0 && ("$IS_PPC32" -ne 0 || "$IS_PPC64" -ne 0)) ]]; then
+if [[ ("$HAVE_DISASS" -ne 0 && "$GCC_48_OR_ABOVE" -ne 0 && ("$IS_PPC32" -ne 0 || "$IS_PPC64" -ne 0)) ]]; then
 
 	############################################
 	# Power8 AES

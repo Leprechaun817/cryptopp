@@ -49,12 +49,11 @@
 #include "misc.h"
 #include "stdcpp.h"
 
-// C1189: error: This header is specific to ARM targets
-#if (CRYPTOPP_ARM_NEON_AVAILABLE) && !defined(_M_ARM64)
+#if (CRYPTOPP_ARM_NEON_HEADER)
 # include <arm_neon.h>
 #endif
 
-#if (CRYPTOPP_ARM_ACLE_AVAILABLE)
+#if (CRYPTOPP_ARM_ACLE_HEADER)
 # include <stdint.h>
 # include <arm_acle.h>
 #endif
@@ -81,11 +80,11 @@ ANONYMOUS_NAMESPACE_BEGIN
 
 using CryptoPP::BlockTransformation;
 
-CRYPTOPP_CONSTANT(BT_XorInput = BlockTransformation::BT_XorInput);
-CRYPTOPP_CONSTANT(BT_AllowParallel = BlockTransformation::BT_AllowParallel);
-CRYPTOPP_CONSTANT(BT_InBlockIsCounter = BlockTransformation::BT_InBlockIsCounter);
-CRYPTOPP_CONSTANT(BT_ReverseDirection = BlockTransformation::BT_ReverseDirection);
-CRYPTOPP_CONSTANT(BT_DontIncrementInOutPointers = BlockTransformation::BT_DontIncrementInOutPointers);
+CRYPTOPP_CONSTANT(BT_XorInput = BlockTransformation::BT_XorInput);
+CRYPTOPP_CONSTANT(BT_AllowParallel = BlockTransformation::BT_AllowParallel);
+CRYPTOPP_CONSTANT(BT_InBlockIsCounter = BlockTransformation::BT_InBlockIsCounter);
+CRYPTOPP_CONSTANT(BT_ReverseDirection = BlockTransformation::BT_ReverseDirection);
+CRYPTOPP_CONSTANT(BT_DontIncrementInOutPointers = BlockTransformation::BT_DontIncrementInOutPointers);
 
 ANONYMOUS_NAMESPACE_END
 
