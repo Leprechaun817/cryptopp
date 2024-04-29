@@ -4,9 +4,9 @@
 //              implementation at http://github.com/BLAKE2/BLAKE2.
 //
 // The BLAKE2b and BLAKE2s numbers are consistent with the BLAKE2 team's
-// numbers. However, we have an Altivec/POWER7 implementation of BLAKE2s,
-// and a POWER8 implementation of BLAKE2b (BLAKE2 is missing them). The
-// Altivec/POWER7 code is about 2x faster than C++ when using GCC 5.0 or
+// numbers. However, we have an Altivec implementation of BLAKE2s,
+// and a POWER8 implementation of BLAKE2b (BLAKE2 team is missing them).
+// Altivec code is about 2x faster than C++ when using GCC 5.0 or
 // above. The POWER8 code is about 2.5x faster than C++ when using GCC 5.0
 // or above. If you use GCC 4.0 (PowerMac) or GCC 4.8 (GCC Compile Farm)
 // then the PowerPC code will be slower than C++. Be sure to use GCC 5.0
@@ -22,7 +22,7 @@
 #include "cpu.h"
 
 // Uncomment for benchmarking C++ against SSE2 or NEON.
-// Do so in both blake2.cpp and blake2-simd.cpp.
+// Do so in both blake2.cpp and blake2_simd.cpp.
 // #undef CRYPTOPP_SSE41_AVAILABLE
 // #undef CRYPTOPP_ARM_NEON_AVAILABLE
 // #undef CRYPTOPP_ALTIVEC_AVAILABLE
@@ -181,9 +181,7 @@ extern void BLAKE2_Compress32_NEON(const byte* input, BLAKE2s_State& state);
 extern void BLAKE2_Compress64_NEON(const byte* input, BLAKE2b_State& state);
 #endif
 
-#if CRYPTOPP_POWER8_AVAILABLE
-extern void BLAKE2_Compress32_POWER8(const byte* input, BLAKE2s_State& state);
-#elif CRYPTOPP_ALTIVEC_AVAILABLE
+#if CRYPTOPP_ALTIVEC_AVAILABLE
 extern void BLAKE2_Compress32_ALTIVEC(const byte* input, BLAKE2s_State& state);
 #endif
 
@@ -195,17 +193,17 @@ unsigned int BLAKE2b::OptimalDataAlignment() const
 {
 #if defined(CRYPTOPP_SSE41_AVAILABLE)
     if (HasSSE41())
-        return 16;
+        return 16;  // load __m128i
     else
 #endif
 #if (CRYPTOPP_ARM_NEON_AVAILABLE)
     if (HasNEON())
-        return 4;
+        return 8;  // load uint64x2_t
     else
 #endif
 #if (CRYPTOPP_POWER8_AVAILABLE)
     if (HasPower8())
-        return 16;
+        return 16;  // load vector long long
     else
 #endif
     return GetAlignmentOf<word64>();
@@ -235,21 +233,17 @@ unsigned int BLAKE2s::OptimalDataAlignment() const
 {
 #if defined(CRYPTOPP_SSE41_AVAILABLE)
     if (HasSSE41())
-        return 16;
+        return 16;  // load __m128i
     else
 #endif
 #if (CRYPTOPP_ARM_NEON_AVAILABLE)
     if (HasNEON())
-        return 4;
+        return 4;  // load uint32x4_t
     else
 #endif
-#if (CRYPTOPP_POWER8_AVAILABLE)
-    if (HasPower8())
-        return 16;
-    else
-#elif (CRYPTOPP_ALTIVEC_AVAILABLE)
+#if (CRYPTOPP_ALTIVEC_AVAILABLE)
     if (HasAltivec())
-        return 16;
+        return 16;  // load vector unsigned int
     else
 #endif
     return GetAlignmentOf<word32>();
@@ -267,11 +261,7 @@ std::string BLAKE2s::AlgorithmProvider() const
         return "NEON";
     else
 #endif
-#if (CRYPTOPP_POWER8_AVAILABLE)
-    if (HasPower8())
-        return "Power8";
-    else
-#elif (CRYPTOPP_ALTIVEC_AVAILABLE)
+#if (CRYPTOPP_ALTIVEC_AVAILABLE)
     if (HasAltivec())
         return "Altivec";
     else
@@ -494,14 +484,12 @@ void BLAKE2s::Restart(const BLAKE2s_ParameterBlock& block, const word32 counter[
 
     // We take a parameter block as a parameter to allow customized state.
     // Avoid the copy of the parameter block when we are passing our own block.
-    if (block.data() == m_block.data())
-        m_block.Reset(m_digestSize, m_keyLength);
-    else
-    {
+    if (block.data() != m_block.data()) {
         std::memcpy(m_block.data(), block.data(), m_block.size());
-        m_block.m_data[BLAKE2s_ParameterBlock::DigestOff] = (byte)m_digestSize;
-        m_block.m_data[BLAKE2s_ParameterBlock::KeyOff] = (byte)m_keyLength;
     }
+
+    m_block.m_data[BLAKE2s_ParameterBlock::DigestOff] = (byte)m_digestSize;
+    m_block.m_data[BLAKE2s_ParameterBlock::KeyOff] = (byte)m_keyLength;
 
     const word32* iv = BLAKE2S_IV;
     PutBlock<word32, LittleEndian, true> put(m_block.data(), m_state.h());
@@ -527,14 +515,12 @@ void BLAKE2b::Restart(const BLAKE2b_ParameterBlock& block, const word64 counter[
 
     // We take a parameter block as a parameter to allow customized state.
     // Avoid the copy of the parameter block when we are passing our own block.
-    if (block.data() == m_block.data())
-        m_block.Reset(m_digestSize, m_keyLength);
-    else
-    {
+    if (block.data() != m_block.data()) {
         std::memcpy(m_block.data(), block.data(), m_block.size());
-        m_block.m_data[BLAKE2b_ParameterBlock::DigestOff] = (byte)m_digestSize;
-        m_block.m_data[BLAKE2b_ParameterBlock::KeyOff] = (byte)m_keyLength;
     }
+
+    m_block.m_data[BLAKE2b_ParameterBlock::DigestOff] = (byte)m_digestSize;
+    m_block.m_data[BLAKE2b_ParameterBlock::KeyOff] = (byte)m_keyLength;
 
     const word64* iv = BLAKE2B_IV;
     PutBlock<word64, LittleEndian, true> put(m_block.data(), m_state.h());
@@ -700,12 +686,7 @@ void BLAKE2s::Compress(const byte *input)
         return BLAKE2_Compress32_NEON(input, m_state);
     }
 #endif
-#if CRYPTOPP_POWER8_AVAILABLE
-    if(HasPower8())
-    {
-        return BLAKE2_Compress32_POWER8(input, m_state);
-    }
-#elif CRYPTOPP_ALTIVEC_AVAILABLE
+#if CRYPTOPP_ALTIVEC_AVAILABLE
     if(HasAltivec())
     {
         return BLAKE2_Compress32_ALTIVEC(input, m_state);

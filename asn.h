@@ -28,30 +28,55 @@ NAMESPACE_BEGIN(CryptoPP)
 /// \note These tags are not complete
 enum ASNTag
 {
+	/// \brief ASN.1 Boolean
 	BOOLEAN 			= 0x01,
+	/// \brief ASN.1 Integer
 	INTEGER 			= 0x02,
+	/// \brief ASN.1 Bit string
 	BIT_STRING			= 0x03,
+	/// \brief ASN.1 Octet string
 	OCTET_STRING		= 0x04,
+	/// \brief ASN.1 Null
 	TAG_NULL			= 0x05,
+	/// \brief ASN.1 Object identifier
 	OBJECT_IDENTIFIER	= 0x06,
+	/// \brief ASN.1 Object descriptor
 	OBJECT_DESCRIPTOR	= 0x07,
+	/// \brief ASN.1 External reference
 	EXTERNAL			= 0x08,
+	/// \brief ASN.1 Real integer
 	REAL				= 0x09,
+	/// \brief ASN.1 Enumerated value
 	ENUMERATED			= 0x0a,
+	/// \brief ASN.1 UTF-8 string
 	UTF8_STRING			= 0x0c,
+	/// \brief ASN.1 Sequence
 	SEQUENCE			= 0x10,
+	/// \brief ASN.1 Set
 	SET 				= 0x11,
+	/// \brief ASN.1 Numeric string
 	NUMERIC_STRING		= 0x12,
+	/// \brief ASN.1 Printable string
 	PRINTABLE_STRING 	= 0x13,
+	/// \brief ASN.1 T61 string
 	T61_STRING			= 0x14,
+	/// \brief ASN.1 Videotext string
 	VIDEOTEXT_STRING 	= 0x15,
+	/// \brief ASN.1 IA5 string
 	IA5_STRING			= 0x16,
+	/// \brief ASN.1 UTC time
 	UTC_TIME 			= 0x17,
+	/// \brief ASN.1 Generalized time
 	GENERALIZED_TIME 	= 0x18,
+	/// \brief ASN.1 Graphic string
 	GRAPHIC_STRING		= 0x19,
+	/// \brief ASN.1 Visible string
 	VISIBLE_STRING		= 0x1a,
+	/// \brief ASN.1 General string
 	GENERAL_STRING		= 0x1b,
+	/// \brief ASN.1 Universal string
 	UNIVERSAL_STRING	= 0x1c,
+	/// \brief ASN.1 BMP string
 	BMP_STRING  		= 0x1e
 };
 
@@ -59,13 +84,19 @@ enum ASNTag
 /// \note These flags are not complete
 enum ASNIdFlag
 {
+	/// \brief ASN.1 Universal class
 	UNIVERSAL           = 0x00,
-//	DATA                = 0x01,
-//	HEADER              = 0x02,
+	// DATA           = 0x01,
+	// HEADER           = 0x02,
+	/// \brief ASN.1 Primitive flag
 	PRIMITIVE           = 0x00,
+	/// \brief ASN.1 Constructed flag
 	CONSTRUCTED         = 0x20,
+	/// \brief ASN.1 Application class
 	APPLICATION         = 0x40,
+	/// \brief ASN.1 Context specific class
 	CONTEXT_SPECIFIC    = 0x80,
+	/// \brief ASN.1 Private class
 	PRIVATE             = 0xc0
 };
 
@@ -79,21 +110,21 @@ public:
 	/// \brief Construct an UnknownOID
 	UnknownOID() : BERDecodeErr("BER decode error: unknown object identifier") {}
 	/// \brief Construct an UnknownOID
-	/// \param err error message to use for the execption
+	/// \param err error message to use for the exception
 	UnknownOID(const char *err) : BERDecodeErr(err) {}
 };
 
 /// \brief DER encode a length
 /// \param bt BufferedTransformation object for writing
 /// \param length the size to encode
-/// \returns the number of octets used for the encoding
+/// \return the number of octets used for the encoding
 CRYPTOPP_DLL size_t CRYPTOPP_API DERLengthEncode(BufferedTransformation &bt, lword length);
 
 /// \brief BER decode a length
 /// \param bt BufferedTransformation object for reading
 /// \param length the decoded size
-/// \returns true if the value was decoded
-/// \throws BERDecodeError if the value fails to decode or is too large for size_t
+/// \return true if the value was decoded
+/// \throw BERDecodeError if the value fails to decode or is too large for size_t
 /// \details BERLengthDecode() returns false if the encoding is indefinite length.
 CRYPTOPP_DLL bool CRYPTOPP_API BERLengthDecode(BufferedTransformation &bt, size_t &length);
 
@@ -109,33 +140,33 @@ CRYPTOPP_DLL void CRYPTOPP_API BERDecodeNull(BufferedTransformation &bt);
 /// \param bt BufferedTransformation object for writing
 /// \param str the string to encode
 /// \param strLen the length of the string
-/// \returns the number of octets used for the encoding
+/// \return the number of octets used for the encoding
 CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeOctetString(BufferedTransformation &bt, const byte *str, size_t strLen);
 
 /// \brief DER encode octet string
 /// \param bt BufferedTransformation object for reading
 /// \param str the string to encode
-/// \returns the number of octets used for the encoding
+/// \return the number of octets used for the encoding
 CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeOctetString(BufferedTransformation &bt, const SecByteBlock &str);
 
 /// \brief BER decode octet string
 /// \param bt BufferedTransformation object for reading
 /// \param str the decoded string
-/// \returns the number of octets used for the encoding
+/// \return the number of octets used for the encoding
 CRYPTOPP_DLL size_t CRYPTOPP_API BERDecodeOctetString(BufferedTransformation &bt, SecByteBlock &str);
 
 /// \brief BER decode octet string
 /// \param bt BufferedTransformation object for reading
 /// \param str the decoded string
-/// \returns the number of octets used for the encoding
+/// \return the number of octets used for the encoding
 CRYPTOPP_DLL size_t CRYPTOPP_API BERDecodeOctetString(BufferedTransformation &bt, BufferedTransformation &str);
 
 /// \brief DER encode text string
 /// \param bt BufferedTransformation object for writing
 /// \param str the string to encode
 /// \param strLen the length of the string, in bytes
-/// \param asnTag the ASN.1 type
-/// \returns the number of octets used for the encoding
+/// \param asnTag the ASN.1 identifier
+/// \return the number of octets used for the encoding
 /// \details DEREncodeTextString() can be used for UTF8_STRING, PRINTABLE_STRING, and IA5_STRING
 /// \since Crypto++ 8.3
 CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeTextString(BufferedTransformation &bt, const byte* str, size_t strLen, byte asnTag);
@@ -143,8 +174,8 @@ CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeTextString(BufferedTransformation &bt,
 /// \brief DER encode text string
 /// \param bt BufferedTransformation object for writing
 /// \param str the string to encode
-/// \param asnTag the ASN.1 type
-/// \returns the number of octets used for the encoding
+/// \param asnTag the ASN.1 identifier
+/// \return the number of octets used for the encoding
 /// \details DEREncodeTextString() can be used for UTF8_STRING, PRINTABLE_STRING, and IA5_STRING
 /// \since Crypto++ 8.3
 CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeTextString(BufferedTransformation &bt, const SecByteBlock &str, byte asnTag);
@@ -152,8 +183,8 @@ CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeTextString(BufferedTransformation &bt,
 /// \brief DER encode text string
 /// \param bt BufferedTransformation object for writing
 /// \param str the string to encode
-/// \param asnTag the ASN.1 type
-/// \returns the number of octets used for the encoding
+/// \param asnTag the ASN.1 identifier
+/// \return the number of octets used for the encoding
 /// \details DEREncodeTextString() can be used for UTF8_STRING, PRINTABLE_STRING, and IA5_STRING
 /// \since Crypto++ 6.0
 CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeTextString(BufferedTransformation &bt, const std::string &str, byte asnTag);
@@ -161,7 +192,7 @@ CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeTextString(BufferedTransformation &bt,
 /// \brief BER decode text string
 /// \param bt BufferedTransformation object for reading
 /// \param str the string to decode
-/// \param asnTag the ASN.1 type
+/// \param asnTag the ASN.1 identifier
 /// \details BERDecodeTextString() can be used for UTF8_STRING, PRINTABLE_STRING, and IA5_STRING
 /// \since Crypto++ 8.3
 CRYPTOPP_DLL size_t CRYPTOPP_API BERDecodeTextString(BufferedTransformation &bt, SecByteBlock &str, byte asnTag);
@@ -169,7 +200,7 @@ CRYPTOPP_DLL size_t CRYPTOPP_API BERDecodeTextString(BufferedTransformation &bt,
 /// \brief BER decode text string
 /// \param bt BufferedTransformation object for reading
 /// \param str the string to decode
-/// \param asnTag the ASN.1 type
+/// \param asnTag the ASN.1 identifier
 /// \details BERDecodeTextString() can be used for UTF8_STRING, PRINTABLE_STRING, and IA5_STRING
 /// \since Crypto++ 6.0
 CRYPTOPP_DLL size_t CRYPTOPP_API BERDecodeTextString(BufferedTransformation &bt, std::string &str, byte asnTag);
@@ -177,8 +208,8 @@ CRYPTOPP_DLL size_t CRYPTOPP_API BERDecodeTextString(BufferedTransformation &bt,
 /// \brief DER encode date
 /// \param bt BufferedTransformation object for writing
 /// \param str the date to encode
-/// \param asnTag the ASN.1 type
-/// \returns the number of octets used for the encoding
+/// \param asnTag the ASN.1 identifier
+/// \return the number of octets used for the encoding
 /// \details BERDecodeDate() can be used for UTC_TIME and GENERALIZED_TIME
 /// \since Crypto++ 8.3
 CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeDate(BufferedTransformation &bt, const SecByteBlock &str, byte asnTag);
@@ -186,7 +217,7 @@ CRYPTOPP_DLL size_t CRYPTOPP_API DEREncodeDate(BufferedTransformation &bt, const
 /// \brief BER decode date
 /// \param bt BufferedTransformation object for reading
 /// \param str the date to decode
-/// \param asnTag the ASN.1 type
+/// \param asnTag the ASN.1 identifier
 /// \details BERDecodeDate() can be used for UTC_TIME and GENERALIZED_TIME
 /// \since Crypto++ 8.3
 CRYPTOPP_DLL size_t CRYPTOPP_API BERDecodeDate(BufferedTransformation &bt, SecByteBlock &str, byte asnTag);
@@ -196,7 +227,7 @@ CRYPTOPP_DLL size_t CRYPTOPP_API BERDecodeDate(BufferedTransformation &bt, SecBy
 /// \param str the string to encode
 /// \param strLen the length of the string
 /// \param unusedBits the number of unused bits
-/// \returns the number of octets used for the encoding
+/// \return the number of octets used for the encoding
 /// \details The caller is responsible for shifting octets if unusedBits is
 ///  not 0. For example, to DER encode a web server X.509 key usage, the 101b
 ///  bit mask is often used (digitalSignature and keyEncipherment). In this
@@ -222,7 +253,7 @@ CRYPTOPP_DLL void CRYPTOPP_API DERReencode(BufferedTransformation &bt, BufferedT
 
 /// \brief BER decode size
 /// \param bt BufferedTransformation object for reading
-/// \returns the length of the ASN.1 value, in bytes
+/// \return the length of the ASN.1 value, in bytes
 /// \details BERDecodePeekLength() determines the length of a value without
 ///  consuming octets in the stream. The stream must use definite length encoding.
 ///  If indefinite length encoding is used or an error occurs, then 0 is returned.
@@ -264,7 +295,7 @@ public:
 
 	/// \brief BER decode an OID
 	/// \param bt BufferedTransformation object
-	/// \throws BERDecodeErr() if decoded value doesn't match an expected OID
+	/// \throw BERDecodeErr() if decoded value doesn't match an expected OID
 	/// \details BERDecodeAndCheck() can be used to parse an OID and verify it matches an expected.
 	/// <pre>
 	///   BERSequenceDecoder key(bt);
@@ -275,14 +306,14 @@ public:
 	void BERDecodeAndCheck(BufferedTransformation &bt) const;
 
 	/// \brief Determine if OID is empty
-	/// \returns true if OID has 0 elements, false otherwise
+	/// \return true if OID has 0 elements, false otherwise
 	/// \since Crypto++ 8.0
 	bool Empty() const {
 		return m_values.empty();
 	}
 
 	/// \brief Retrieve OID value array
-	/// \returns OID value vector
+	/// \return OID value vector
 	/// \since Crypto++ 8.0
 	const std::vector<word32>& GetValues() const {
 		return m_values;
@@ -290,7 +321,7 @@ public:
 
 	/// \brief Print an OID
 	/// \param out ostream object
-	/// \returns ostream reference
+	/// \return ostream reference
 	/// \details Print() writes the OID in a customary format, like
 	///  1.2.840.113549.1.1.11. The caller is reposnsible to convert the
 	///  OID to a friendly name, like sha256WithRSAEncryption.
@@ -300,7 +331,8 @@ public:
 protected:
 	friend bool operator==(const OID &lhs, const OID &rhs);
 	friend bool operator!=(const OID &lhs, const OID &rhs);
-	friend bool operator<(const OID &lhs, const OID &rhs);
+	friend bool operator< (const OID &lhs, const OID &rhs);
+	friend bool operator> (const OID &lhs, const OID &rhs);
 	friend bool operator<=(const OID &lhs, const OID &rhs);
 	friend bool operator>=(const OID &lhs, const OID &rhs);
 
@@ -349,7 +381,7 @@ class CRYPTOPP_DLL BERGeneralDecoder : public Store
 {
 public:
 	/// \brief Default ASN.1 tag
-	enum {DefaultTag = SEQUENCE | CONSTRUCTED};
+	enum {DefaultTag = SEQUENCE | EnumToInt(CONSTRUCTED)};
 
 	virtual ~BERGeneralDecoder();
 
@@ -369,13 +401,13 @@ public:
 	explicit BERGeneralDecoder(BERGeneralDecoder &inQueue, byte asnTag);
 
 	/// \brief Determine length encoding
-	/// \returns true if the ASN.1 object is definite length encoded, false otherwise
+	/// \return true if the ASN.1 object is definite length encoded, false otherwise
 	bool IsDefiniteLength() const {
 		return m_definiteLength;
 	}
 
 	/// \brief Determine remaining length
-	/// \returns number of octets that remain to be consumed
+	/// \return number of octets that remain to be consumed
 	/// \details RemainingLength() is only valid if IsDefiniteLength()
 	///  returns true.
 	lword RemainingLength() const {
@@ -384,19 +416,19 @@ public:
 	}
 
 	/// \brief Determine end of stream
-	/// \returns true if all octets have been consumed, false otherwise
+	/// \return true if all octets have been consumed, false otherwise
 	bool EndReached() const;
 
 	/// \brief Determine next octet
-	/// \returns next octet in the stream
+	/// \return next octet in the stream
 	/// \details PeekByte does not consume the octet.
-	/// \throws BERDecodeError if there are no octets remaining
+	/// \throw BERDecodeError if there are no octets remaining
 	byte PeekByte() const;
 
 	/// \brief Determine next octet
 	/// \details CheckByte reads the next byte in the stream and verifies
 	///  the octet matches b.
-	/// \throws BERDecodeError if the next octet is not b
+	/// \throw BERDecodeError if the next octet is not b
 	void CheckByte(byte b);
 
 	/// \brief Transfer bytes to another BufferedTransformation
@@ -460,7 +492,7 @@ class CRYPTOPP_DLL DERGeneralEncoder : public ByteQueue
 {
 public:
 	/// \brief Default ASN.1 tag
-	enum {DefaultTag = SEQUENCE | CONSTRUCTED};
+	enum {DefaultTag = SEQUENCE | EnumToInt(CONSTRUCTED)};
 
 	virtual ~DERGeneralEncoder();
 
@@ -494,7 +526,7 @@ class CRYPTOPP_DLL BERSequenceDecoder : public BERGeneralDecoder
 {
 public:
 	/// \brief Default ASN.1 tag
-	enum {DefaultTag = SEQUENCE | CONSTRUCTED};
+	enum {DefaultTag = SEQUENCE | EnumToInt(CONSTRUCTED)};
 
 	/// \brief Construct an ASN.1 decoder
 	/// \param inQueue input byte queue
@@ -526,7 +558,7 @@ class CRYPTOPP_DLL DERSequenceEncoder : public DERGeneralEncoder
 {
 public:
 	/// \brief Default ASN.1 tag
-	enum {DefaultTag = SEQUENCE | CONSTRUCTED};
+	enum {DefaultTag = SEQUENCE | EnumToInt(CONSTRUCTED)};
 
 	/// \brief Construct an ASN.1 encoder
 	/// \param outQueue output byte queue
@@ -558,7 +590,7 @@ class CRYPTOPP_DLL BERSetDecoder : public BERGeneralDecoder
 {
 public:
 	/// \brief Default ASN.1 tag
-	enum {DefaultTag = SET | CONSTRUCTED};
+	enum {DefaultTag = SET | EnumToInt(CONSTRUCTED)};
 
 	/// \brief Construct an ASN.1 decoder
 	/// \param inQueue input byte queue
@@ -590,7 +622,7 @@ class CRYPTOPP_DLL DERSetEncoder : public DERGeneralEncoder
 {
 public:
 	/// \brief Default ASN.1 tag
-	enum {DefaultTag = SET | CONSTRUCTED};
+	enum {DefaultTag = SET | EnumToInt(CONSTRUCTED)};
 
 	/// \brief Construct an ASN.1 encoder
 	/// \param outQueue output byte queue
@@ -656,7 +688,7 @@ public:
 	/// \param bt BufferedTransformation object
 	/// \details Save() will write the OID associated with algorithm or scheme.
 	///   In the case of public and private keys, this function writes the
-	///   subjectPubicKeyInfo and privateKeyInfo parts.
+	///   subjectPublicKeyInfo and privateKeyInfo parts.
 	void Save(BufferedTransformation &bt) const
 		{BEREncode(bt);}
 
@@ -676,7 +708,7 @@ public:
 	void DEREncode(BufferedTransformation &bt) const;
 
 	/// \brief Retrieves the OID of the algorithm
-	/// \returns OID of the algorithm
+	/// \return OID of the algorithm
 	virtual OID GetAlgorithmID() const =0;
 
 	/// \brief Decode algorithm parameters
@@ -722,7 +754,7 @@ public:
 	void DEREncode(BufferedTransformation &bt) const;
 
 	/// \brief Retrieves the OID of the algorithm
-	/// \returns OID of the algorithm
+	/// \return OID of the algorithm
 	virtual OID GetAlgorithmID() const =0;
 
 	/// \brief Decode optional parameters
@@ -783,7 +815,7 @@ protected:
 /// \tparam T class or type
 /// \param out BufferedTransformation object
 /// \param w unsigned value to encode
-/// \param asnTag the ASN.1 type
+/// \param asnTag the ASN.1 identifier
 /// \details DEREncodeUnsigned() can be used with INTEGER, BOOLEAN, and ENUM
 template <class T>
 size_t DEREncodeUnsigned(BufferedTransformation &out, T w, byte asnTag = INTEGER)
@@ -816,10 +848,10 @@ size_t DEREncodeUnsigned(BufferedTransformation &out, T w, byte asnTag = INTEGER
 /// \tparam T fundamental C++ type
 /// \param in BufferedTransformation object
 /// \param w the decoded value
-/// \param asnTag the ASN.1 type
+/// \param asnTag the ASN.1 identifier
 /// \param minValue the minimum expected value
 /// \param maxValue the maximum expected value
-/// \throws BERDecodeErr() if the value cannot be parsed or the decoded value is not within range.
+/// \throw BERDecodeErr() if the value cannot be parsed or the decoded value is not within range.
 /// \details DEREncodeUnsigned() can be used with INTEGER, BOOLEAN, and ENUM
 template <class T>
 void BERDecodeUnsigned(BufferedTransformation &in, T &w, byte asnTag = INTEGER,
@@ -871,30 +903,37 @@ void BERDecodeUnsigned(BufferedTransformation &in, T &w, byte asnTag = INTEGER,
 /// \brief Compare two OIDs for equality
 /// \param lhs the first OID
 /// \param rhs the second OID
-/// \returns true if the OIDs are equal, false otherwise
+/// \return true if the OIDs are equal, false otherwise
 inline bool operator==(const OID &lhs, const OID &rhs);
 /// \brief Compare two OIDs for inequality
 /// \param lhs the first OID
 /// \param rhs the second OID
-/// \returns true if the OIDs are not equal, false otherwise
+/// \return true if the OIDs are not equal, false otherwise
 inline bool operator!=(const OID &lhs, const OID &rhs);
 /// \brief Compare two OIDs for ordering
 /// \param lhs the first OID
 /// \param rhs the second OID
-/// \returns true if the first OID is less than the second OID, false otherwise
-/// \details operator<() calls std::lexicographical_compare() on each element in the array of values.
+/// \return true if the first OID is less than the second OID, false otherwise
+/// \details operator<() calls std::lexicographical_compare() on the values.
 inline bool operator<(const OID &lhs, const OID &rhs);
 /// \brief Compare two OIDs for ordering
 /// \param lhs the first OID
 /// \param rhs the second OID
-/// \returns true if the first OID is less than or equal to the second OID, false otherwise
+/// \return true if the first OID is greater than the second OID, false otherwise
+/// \details operator>() is implemented in terms of operator==() and operator<().
+/// \since Crypto++ 8.3
+inline bool operator>(const OID &lhs, const OID &rhs);
+/// \brief Compare two OIDs for ordering
+/// \param lhs the first OID
+/// \param rhs the second OID
+/// \return true if the first OID is less than or equal to the second OID, false otherwise
 /// \details operator<=() is implemented in terms of operator==() and operator<().
 /// \since Crypto++ 8.3
 inline bool operator<=(const OID &lhs, const OID &rhs);
 /// \brief Compare two OIDs for ordering
 /// \param lhs the first OID
 /// \param rhs the second OID
-/// \returns true if the first OID is greater than or equal to the second OID, false otherwise
+/// \return true if the first OID is greater than or equal to the second OID, false otherwise
 /// \details operator>=() is implemented in terms of operator<().
 /// \since Crypto++ 8.3
 inline bool operator>=(const OID &lhs, const OID &rhs);
@@ -905,8 +944,7 @@ inline OID operator+(const OID &lhs, unsigned long rhs);
 /// \brief Print a OID value
 /// \param out the output stream
 /// \param oid the OID
-inline std::ostream& operator<<(std::ostream& out, const OID &oid)
-	{ return oid.Print(out); }
+inline std::ostream& operator<<(std::ostream& out, const OID &oid);
 #else
 inline bool operator==(const ::CryptoPP::OID &lhs, const ::CryptoPP::OID &rhs)
 	{return lhs.m_values == rhs.m_values;}
@@ -914,6 +952,8 @@ inline bool operator!=(const ::CryptoPP::OID &lhs, const ::CryptoPP::OID &rhs)
 	{return lhs.m_values != rhs.m_values;}
 inline bool operator<(const ::CryptoPP::OID &lhs, const ::CryptoPP::OID &rhs)
 	{return std::lexicographical_compare(lhs.m_values.begin(), lhs.m_values.end(), rhs.m_values.begin(), rhs.m_values.end());}
+inline bool operator>(const ::CryptoPP::OID &lhs, const ::CryptoPP::OID &rhs)
+	{return ! (lhs<rhs || lhs==rhs);}
 inline bool operator<=(const ::CryptoPP::OID &lhs, const ::CryptoPP::OID &rhs)
 	{return lhs<rhs || lhs==rhs;}
 inline bool operator>=(const ::CryptoPP::OID &lhs, const ::CryptoPP::OID &rhs)
